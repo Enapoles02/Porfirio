@@ -3,7 +3,7 @@ firebase-admin
 streamlit-autorefresh
 pyzbar
 numpy
-qrcode[pil]
-zbar-py
 streamlit-webrtc
+qrcode[pil]
 numpy
+streamlit-qr-scanner
