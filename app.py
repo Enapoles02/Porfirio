@@ -8,6 +8,20 @@ if not firebase_admin._apps:
     initialize_app(cred)
 db = firestore.client()
 
+# Función para registrar un usuario
+def register_user(email, password, role="user"):
+    users_ref = db.collection("users").where("email", "==", email).stream()
+    for user in users_ref:
+        st.error("El usuario ya existe.")
+        return
+    db.collection("users").add({
+        "email": email,
+        "password": password,
+        "role": role,
+        "points": 0
+    })
+    st.success("Usuario registrado exitosamente. Ahora puedes iniciar sesión.")
+
 # Función para autenticar usuarios
 def authenticate_user(email, password):
     users_ref = db.collection("users").where("email", "==", email).stream()
@@ -34,17 +48,31 @@ def get_user_points(email):
 # Interfaz de la aplicación
 st.title("🎉 Sistema de Recompensas - Helados Gratis 🍦")
 
-# Login
-email = st.text_input("Correo electrónico")
-password = st.text_input("Contraseña", type="password")
+# Selección de acción
+menu = st.sidebar.selectbox("Selecciona una opción", ["Iniciar sesión", "Registrar usuario"])
 
-if st.button("Iniciar sesión"):
-    user = authenticate_user(email, password)
-    if user:
-        st.session_state["user"] = user
-        st.success(f"Bienvenido, {user['email']}! Tienes {user['points']} puntos.")
-    else:
-        st.error("Correo o contraseña incorrectos.")
+if menu == "Registrar usuario":
+    st.subheader("Registro de usuario")
+    new_email = st.text_input("Correo electrónico")
+    new_password = st.text_input("Contraseña", type="password")
+    if st.button("Registrar"):
+        if new_email and new_password:
+            register_user(new_email, new_password)
+        else:
+            st.error("Por favor, completa todos los campos.")
+
+if menu == "Iniciar sesión":
+    st.subheader("Inicio de sesión")
+    email = st.text_input("Correo electrónico")
+    password = st.text_input("Contraseña", type="password")
+    
+    if st.button("Iniciar sesión"):
+        user = authenticate_user(email, password)
+        if user:
+            st.session_state["user"] = user
+            st.success(f"Bienvenido, {user['email']}! Tienes {user['points']} puntos.")
+        else:
+            st.error("Correo o contraseña incorrectos.")
 
 # Verificar si el usuario está autenticado
 if "user" in st.session_state:
