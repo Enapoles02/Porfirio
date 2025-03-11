@@ -1,4 +1,9 @@
 import streamlit as st
+import qrcode
+import cv2
+import numpy as np
+from pyzbar.pyzbar import decode
+from io import BytesIO
 from firebase_admin import credentials, firestore, initialize_app
 import firebase_admin
 from datetime import datetime, timedelta
@@ -9,6 +14,33 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(st.secrets["firebase_credentials"])
     initialize_app(cred)
 db = firestore.client()
+
+# Función para generar un QR
+def generate_qr(data):
+    qr = qrcode.make(data)
+    buf = BytesIO()
+    qr.save(buf, format="PNG")
+    return buf.getvalue()
+
+# Función para escanear QR desde la cámara
+def scan_qr_camera():
+    cap = cv2.VideoCapture(0)
+    scanned_email = None
+    st.write("Escaneando... Apunta la cámara al QR")
+    while scanned_email is None:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        qr_codes = decode(frame)
+        for qr in qr_codes:
+            scanned_email = qr.data.decode('utf-8')
+            break
+        cv2.imshow("Escaneo QR", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cap.release()
+    cv2.destroyAllWindows()
+    return scanned_email
 
 # Función para registrar un usuario
 def register_user(email, password):
@@ -116,21 +148,18 @@ else:
     st.write(f"Nivel: {user_data.get('level', 'Normal')}")
     st.write(f"Estrellas: {user_data.get('stars', 0)} ⭐")
     
+    qr_code = generate_qr(email)
+    st.image(qr_code, caption="Tu código QR para recompensas")
+    
     if user_data.get("level") == "Oro" and user_data.get("stars", 0) >= 100:
         if st.button("Canjear bebida gratis ☕"):
             redeem_drink(email)
     
     if email == "nao.martinez2102@gmail.com":
-        st.subheader("Administración de helados y estrellas")
-        target_email = st.text_input("Correo del usuario")
-        size = st.selectbox("Tamaño del helado", ["small", "medium"])
-        quantity = st.number_input("Cantidad", min_value=1, step=1)
-        if st.button("Registrar helado comprado"):
-            update_ice_cream_count(target_email, size, quantity)
-            st.success(f"Se han registrado {quantity} helados {size} para {target_email}.")
-        
-        st.subheader("Registrar compra para estrellas")
-        purchase_amount = st.number_input("Monto de la compra (MXN)", min_value=10, step=10)
-        if st.button("Registrar estrellas"):
-            add_stars(target_email, purchase_amount)
-            st.success(f"Se han agregado estrellas por {purchase_amount} MXN a {target_email}.")
+        st.subheader("Escanear QR desde la cámara para administrar usuario")
+        if st.button("Escanear QR con cámara"):
+            scanned_email = scan_qr_camera()
+            if scanned_email:
+                st.success(f"Correo escaneado: {scanned_email}")
+            else:
+                st.error("No se detectó un QR válido.")
