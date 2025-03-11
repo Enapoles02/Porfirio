@@ -9,6 +9,21 @@ if not firebase_admin._apps:
     initialize_app(cred)
 db = firestore.client()
 
+# Función para registrar un usuario
+def register_user(email, password):
+    users_ref = db.collection("users").where("email", "==", email).stream()
+    for user in users_ref:
+        st.error("El usuario ya existe.")
+        return
+    db.collection("users").add({
+        "email": email,
+        "password": password,
+        "role": "user",
+        "small_ice_creams": 0,
+        "medium_ice_creams": 0
+    })
+    st.success("Usuario registrado exitosamente. Ahora puedes iniciar sesión.")
+
 # Función para autenticar usuarios
 def authenticate_user(email, password):
     users_ref = db.collection("users").where("email", "==", email).stream()
@@ -55,23 +70,30 @@ def redeem_ice_cream(email, size):
 # Interfaz de la aplicación
 st.title("🎉 Sistema de Recompensas - Helados Gratis 🍦")
 
-# Selección de acción
-menu = st.sidebar.selectbox("Selecciona una opción", ["Iniciar sesión", "Registrar helado"])  
+if "user" not in st.session_state:
+    menu = st.sidebar.selectbox("Selecciona una opción", ["Iniciar sesión", "Registrar usuario"])
+    if menu == "Registrar usuario":
+        st.subheader("Registro de usuario")
+        new_email = st.text_input("Correo electrónico")
+        new_password = st.text_input("Contraseña", type="password")
+        if st.button("Registrar"):
+            if new_email and new_password:
+                register_user(new_email, new_password)
+            else:
+                st.error("Por favor, completa todos los campos.")
 
-if menu == "Iniciar sesión":
-    st.subheader("Inicio de sesión")
-    email = st.text_input("Correo electrónico")
-    password = st.text_input("Contraseña", type="password")
-    
-    if st.button("Iniciar sesión"):
-        user = authenticate_user(email, password)
-        if user:
-            st.session_state["user"] = user
-            st.success(f"Bienvenido, {user['email']}! Tienes {user.get('small_ice_creams', 0)} pequeños y {user.get('medium_ice_creams', 0)} medianos.")
-        else:
-            st.error("Correo o contraseña incorrectos.")
-
-if "user" in st.session_state:
+    if menu == "Iniciar sesión":
+        st.subheader("Inicio de sesión")
+        email = st.text_input("Correo electrónico")
+        password = st.text_input("Contraseña", type="password")
+        if st.button("Iniciar sesión"):
+            user = authenticate_user(email, password)
+            if user:
+                st.session_state["user"] = user
+                st.experimental_rerun()
+            else:
+                st.error("Correo o contraseña incorrectos.")
+else:
     user = st.session_state["user"]
     email = user["email"]
     user_data = get_user_data(email)
@@ -79,6 +101,7 @@ if "user" in st.session_state:
     small_ice_creams = user_data.get("small_ice_creams", 0)
     medium_ice_creams = user_data.get("medium_ice_creams", 0)
     
+    st.write(f"Bienvenido, {email}")
     st.write("Helados pequeños:")
     st.write("".join(["🍦" if i < small_ice_creams else "⚪" for i in range(5)]))
     
@@ -92,15 +115,11 @@ if "user" in st.session_state:
         if redeem_ice_cream(email, "medium"):
             st.success("¡Has canjeado un helado mediano! 🎉")
 
-if menu == "Registrar helado":
-    st.subheader("Administración de helados")
-    admin_email = "nao.martinez2102@gmail.com"
-    if "user" in st.session_state and st.session_state["user"].get("email") == admin_email:
+    if email == "nao.martinez2102@gmail.com":
+        st.subheader("Administración de helados")
         target_email = st.text_input("Correo del usuario")
         size = st.selectbox("Tamaño del helado", ["small", "medium"])
         quantity = st.number_input("Cantidad", min_value=1, step=1)
         if st.button("Registrar helado comprado"):
             update_ice_cream_count(target_email, size, quantity)
             st.success(f"Se han registrado {quantity} helados {size} para {target_email}.")
-    else:
-        st.error("Solo el administrador puede registrar helados.")
