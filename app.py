@@ -62,7 +62,7 @@ if "user" not in st.session_state:
                     user = user_data
             if user:
                 st.session_state["user"] = user
-                st.experimental_rerun()
+                st_autorefresh(interval=3000, key='refresh')
             else:
                 st.error("Correo o contraseña incorrectos.")
 else:
