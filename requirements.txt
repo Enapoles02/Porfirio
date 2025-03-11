@@ -1,9 +1,8 @@
 streamlit
 firebase-admin
 streamlit-autorefresh
-pyzbar
 numpy
 streamlit-webrtc
-qrcode[pil]
-numpy
+qrcode
 streamlit-qr-scanner
+zbar-py
