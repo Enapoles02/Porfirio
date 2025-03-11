@@ -7,7 +7,7 @@ import firebase_admin
 from datetime import datetime, timedelta
 from streamlit_webrtc import webrtc_streamer
 import av
-import cv2
+from streamlit_qr_scanner import qr_scanner
 
 # Inicializar Firebase si no está inicializado
 if not firebase_admin._apps:
@@ -21,19 +21,6 @@ def generate_qr(data):
     buf = BytesIO()
     qr.save(buf, format="PNG")
     return buf.getvalue()
-
-# Procesador de video para escanear QR en vivo
-class VideoProcessor:
-    def __init__(self):
-        self.qr_detector = cv2.QRCodeDetector()
-        self.scanned_email = None
-
-    def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        data, bbox, _ = self.qr_detector.detectAndDecode(img)
-        if data:
-            self.scanned_email = data
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # Interfaz de la aplicación
 st.title("HELADOS BAHAMA 🍦")
@@ -78,6 +65,6 @@ else:
 
     if email == "nao.martinez2102@gmail.com":
         st.subheader("Escanear QR en vivo")
-        ctx = webrtc_streamer(key="qr_scan", video_processor_factory=VideoProcessor)
-        if ctx.video_processor and ctx.video_processor.scanned_email:
-            st.success(f"Correo escaneado: {ctx.video_processor.scanned_email}")
+        scanned_email = qr_scanner()
+        if scanned_email:
+            st.success(f"Correo escaneado: {scanned_email}")
