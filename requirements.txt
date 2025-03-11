@@ -4,3 +4,4 @@ streamlit-autorefresh
 opencv-python
 pyzbar
 numpy
+qrcode[pil]
