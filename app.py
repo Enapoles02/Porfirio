@@ -21,7 +21,9 @@ def register_user(email, password):
         "password": password,
         "role": "user",
         "small_ice_creams": 0,
-        "medium_ice_creams": 0
+        "medium_ice_creams": 0,
+        "stars": 0,
+        "level": "Normal"
     })
     st.success("Usuario registrado exitosamente. Ahora puedes iniciar sesión.")
 
@@ -44,32 +46,30 @@ def update_ice_cream_count(email, size, quantity):
         elif size == "medium":
             user_ref.update({"medium_ice_creams": firestore.Increment(quantity)})
 
-# Función para obtener información del usuario
-def get_user_data(email):
+# Función para registrar estrellas
+def add_stars(email, amount):
+    stars_to_add = amount // 10
     users_ref = db.collection("users").where("email", "==", email).stream()
     for user in users_ref:
-        return user.to_dict()
-    return None
+        user_ref = db.collection("users").document(user.id)
+        user_data = user.to_dict()
+        new_star_count = user_data.get("stars", 0) + stars_to_add
+        level = "Oro" if new_star_count >= 200 else "Normal"
+        user_ref.update({"stars": new_star_count, "level": level})
 
-# Función para manejar el canje de helado
-def redeem_ice_cream(email, size):
-    user_data = get_user_data(email)
-    if user_data:
-        total_ice_creams = user_data.get(f"{size}_ice_creams", 0)
-        if total_ice_creams >= 5:
-            users_ref = db.collection("users").where("email", "==", email).stream()
-            for user in users_ref:
-                user_ref = db.collection("users").document(user.id)
-                user_ref.update({
-                    f"{size}_ice_creams": firestore.Increment(-5),
-                    "redemption_date": datetime.now().strftime("%Y-%m-%d"),
-                    "expiration_date": (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d")
-                })
-            return True
-    return False
+# Función para canjear bebida gratis
+def redeem_drink(email):
+    users_ref = db.collection("users").where("email", "==", email).stream()
+    for user in users_ref:
+        user_ref = db.collection("users").document(user.id)
+        user_data = user.to_dict()
+        if user_data.get("level", "Normal") == "Oro" and user_data.get("stars", 0) >= 100:
+            user_ref.update({"stars": firestore.Increment(-100)})
+            st.success("¡Has canjeado una bebida gratis! ☕")
 
 # Interfaz de la aplicación
-st.title("🎉 Sistema de Recompensas - Helados Gratis 🍦")
+st.title("HELADOS BAHAMA 🍦")
+st.subheader("CHURRERÍA PORFIRIO ☕")
 
 if "user" not in st.session_state:
     menu = st.sidebar.selectbox("Selecciona una opción", ["Iniciar sesión", "Registrar usuario"])
@@ -94,34 +94,30 @@ if "user" not in st.session_state:
                 st_autorefresh(interval=2000, key='refresh')
             else:
                 st.error("Correo o contraseña incorrectos.")
-
 else:
     user = st.session_state["user"]
     email = user["email"]
     user_data = get_user_data(email)
     
-    small_ice_creams = user_data.get("small_ice_creams", 0)
-    medium_ice_creams = user_data.get("medium_ice_creams", 0)
-    
     st.write(f"Bienvenido, {email}")
-    st.write("Helados pequeños:")
-    st.write("".join(["🍦" if i < small_ice_creams else "⚪" for i in range(5)]))
+    st.write(f"Nivel: {user_data.get('level', 'Normal')}")
+    st.write(f"Estrellas: {user_data.get('stars', 0)} ⭐")
     
-    st.write("Helados medianos:")
-    st.write("".join(["🍦" if i < medium_ice_creams else "⚪" for i in range(5)]))
+    if user_data.get("level") == "Oro" and user_data.get("stars", 0) >= 100:
+        if st.button("Canjear bebida gratis ☕"):
+            redeem_drink(email)
     
-    if small_ice_creams >= 5:
-        if redeem_ice_cream(email, "small"):
-            st.success("¡Has canjeado un helado pequeño! 🎉")
-    if medium_ice_creams >= 5:
-        if redeem_ice_cream(email, "medium"):
-            st.success("¡Has canjeado un helado mediano! 🎉")
-
     if email == "nao.martinez2102@gmail.com":
-        st.subheader("Administración de helados")
+        st.subheader("Administración de helados y estrellas")
         target_email = st.text_input("Correo del usuario")
         size = st.selectbox("Tamaño del helado", ["small", "medium"])
         quantity = st.number_input("Cantidad", min_value=1, step=1)
         if st.button("Registrar helado comprado"):
             update_ice_cream_count(target_email, size, quantity)
             st.success(f"Se han registrado {quantity} helados {size} para {target_email}.")
+        
+        st.subheader("Registrar compra para estrellas")
+        purchase_amount = st.number_input("Monto de la compra (MXN)", min_value=10, step=10)
+        if st.button("Registrar estrellas"):
+            add_stars(target_email, purchase_amount)
+            st.success(f"Se han agregado estrellas por {purchase_amount} MXN a {target_email}.")
