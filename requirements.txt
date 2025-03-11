@@ -4,5 +4,6 @@ streamlit-autorefresh
 numpy
 streamlit-webrtc
 qrcode
+pyzbar
+opencv-python-headless
 streamlit-qr-scanner
-zbar-py
