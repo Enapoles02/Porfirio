@@ -36,6 +36,19 @@ def authenticate_user(email, password):
             return user_data
     return None
 
+# Función para obtener información del usuario
+def get_user_data(email):
+    users_ref = db.collection("users").where("email", "==", email).stream()
+    user_data = None
+    for user in users_ref:
+        user_data = user.to_dict()
+        break  # Solo tomamos el primer usuario encontrado
+    
+    if not user_data:
+        return {"email": email, "small_ice_creams": 0, "medium_ice_creams": 0, "stars": 0, "level": "Normal"}
+    
+    return user_data
+
 # Función para actualizar el conteo de helados
 def update_ice_cream_count(email, size, quantity):
     users_ref = db.collection("users").where("email", "==", email).stream()
