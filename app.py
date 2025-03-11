@@ -2,7 +2,7 @@ import streamlit as st
 from firebase_admin import credentials, firestore, initialize_app
 import firebase_admin
 from datetime import datetime, timedelta
-import streamlit_restart
+from streamlit_autorefresh import st_autorefresh
 
 # Inicializar Firebase si no está inicializado
 if not firebase_admin._apps:
@@ -91,7 +91,7 @@ if "user" not in st.session_state:
             user = authenticate_user(email, password)
             if user:
                 st.session_state["user"] = user
-                streamlit_restart.rerun()
+                st_autorefresh(interval=2000, key='refresh')
             else:
                 st.error("Correo o contraseña incorrectos.")
 else:
