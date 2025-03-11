@@ -7,6 +7,7 @@ from firebase_admin import credentials, firestore
 from datetime import datetime, timedelta
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 import av
+from streamlit_autorefresh import st_autorefresh
 
 # Inicializar Firebase si no está inicializado
 if not firebase_admin._apps:
