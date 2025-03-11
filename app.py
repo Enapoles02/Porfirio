@@ -18,9 +18,14 @@ def register_user(email, password, role="user"):
         "email": email,
         "password": password,
         "role": role,
-        "points": 0
+        "points": 0,
+        "small_ice_creams": 0,
+        "medium_ice_creams": 0
     })
     st.success("Usuario registrado exitosamente. Ahora puedes iniciar sesión.")
+
+# Registrar usuario admin
+register_user("nao.martinez2102@gmail.com", "adminpass", role="admin")
 
 # Función para autenticar usuarios
 def authenticate_user(email, password):
@@ -44,6 +49,16 @@ def get_user_points(email):
     for user in users_ref:
         return user.to_dict().get("points", 0)
     return 0
+
+# Función para asignar helados
+def assign_ice_cream(email, size):
+    users_ref = db.collection("users").where("email", "==", email).stream()
+    for user in users_ref:
+        user_ref = db.collection("users").document(user.id)
+        if size == "small":
+            user_ref.update({"small_ice_creams": firestore.Increment(1)})
+        elif size == "medium":
+            user_ref.update({"medium_ice_creams": firestore.Increment(1)})
 
 # Interfaz de la aplicación
 st.title("🎉 Sistema de Recompensas - Helados Gratis 🍦")
@@ -79,21 +94,34 @@ if "user" in st.session_state:
     user = st.session_state["user"]
     st.write(f"Puntos actuales: {get_user_points(user['email'])}")
     
-    # Si es Master User, permitir asignar puntos
-    if user.get("role") == "master":
-        st.subheader("Asignar puntos a usuarios")
-        target_email = st.text_input("Correo del usuario a premiar")
-        points_to_add = st.number_input("Puntos a agregar", min_value=1, step=1)
-        if st.button("Agregar puntos"):
-            update_points(target_email, points_to_add)
-            st.success(f"{points_to_add} puntos agregados a {target_email}.")
+    # Si es Naomi (admin), permitir ver usuarios y asignar helados
+    if user.get("role") == "admin":
+        st.subheader("Administración de usuarios")
+        users = db.collection("users").stream()
+        for u in users:
+            user_data = u.to_dict()
+            st.write(f"Usuario: {user_data['email']} - Puntos: {user_data['points']}")
+            size = st.selectbox(f"Tipo de helado para {user_data['email']}", ["small", "medium"], key=u.id)
+            if st.button(f"Asignar helado a {user_data['email']}", key=u.id):
+                assign_ice_cream(user_data['email'], size)
+                st.success(f"Se ha asignado un helado {size} a {user_data['email']}.")
     
     # Sección de canje de helados
     st.subheader("Canjear puntos por helados")
-    if st.button("Canjear 10 puntos por un helado"):
-        current_points = get_user_points(user["email"])
-        if current_points >= 10:
-            update_points(user["email"], -10)
-            st.success("¡Has canjeado un helado! 🍦")
+    current_points = get_user_points(user["email"])
+    st.write("Cada 100 puntos equivalen a 1 helado.")
+    if st.button("Canjear Small (100 puntos)"):
+        if current_points >= 100:
+            update_points(user["email"], -100)
+            assign_ice_cream(user["email"], "small")
+            st.success("¡Has canjeado un helado pequeño! 🍦")
         else:
             st.error("No tienes suficientes puntos.")
+    if st.button("Canjear Medium (200 puntos)"):
+        if current_points >= 200:
+            update_points(user["email"], -200)
+            assign_ice_cream(user["email"], "medium")
+            st.success("¡Has canjeado un helado mediano! 🍦")
+        else:
+            st.error("No tienes suficientes puntos.")
+
