@@ -70,9 +70,13 @@ else:
     email = user["email"]
     
     st.write(f"Bienvenido, {email}")
-    qr_code = generate_qr(email)
-    st.image(qr_code, caption="Tu código QR para recompensas")
 
+    if email != "nao.martinez2102@gmail.com":
+        qr_code = generate_qr(email)
+        st.image(qr_code, caption="Tu código QR para recompensas")
+        st.write(f"Estrellas actuales: {user.get('stars', 0)}")
+        st.write(f"Helados acumulados: {user.get('helados', 0)}")
+    
     if email == "nao.martinez2102@gmail.com":
         st.subheader("Escanear QR en vivo o ingresar correo manualmente")
         ctx = webrtc_streamer(key="qr_scan", video_transformer_factory=QRScanner)
@@ -89,13 +93,14 @@ else:
                 user_doc = u.id
             
             if selected_user:
-                st.write(f"Estrellas actuales: {selected_user.get('stars', 0)}")
-                st.write(f"Helados acumulados: {selected_user.get('helados', 0)}")
-                add_stars = st.number_input("Añadir estrellas", min_value=0, step=1)
+                st.subheader("Asignar recompensas")
+                purchase_amount = st.number_input("Monto de la compra (MXN)", min_value=0.0, step=0.1)
                 add_helados = st.number_input("Añadir helados", min_value=0, step=1)
                 
+                calculated_stars = int(purchase_amount // 10)
+                
                 if st.button("Actualizar recompensas"):
-                    new_stars = selected_user.get("stars", 0) + add_stars
+                    new_stars = selected_user.get("stars", 0) + calculated_stars
                     new_helados = selected_user.get("helados", 0) + add_helados
                     db.collection("users").document(user_doc).update({"stars": new_stars, "helados": new_helados})
                     st.success("Recompensas actualizadas correctamente.")
