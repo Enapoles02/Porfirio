@@ -44,7 +44,7 @@ if "user" not in st.session_state:
         new_password = st.text_input("Contraseña", type="password")
         if st.button("Registrar"):
             if new_email and new_password:
-                db.collection("users").add({"email": new_email, "password": new_password, "stars": 0, "level": "Normal"})
+                db.collection("users").add({"email": new_email, "password": new_password, "stars": 0, "level": "Normal", "helados": 0})
                 st.success("Usuario registrado exitosamente. Ahora puedes iniciar sesión.")
             else:
                 st.error("Por favor, completa todos los campos.")
@@ -82,5 +82,24 @@ else:
         
         if selected_email:
             st.success(f"Correo seleccionado: {selected_email}")
+            user_ref = db.collection("users").where("email", "==", selected_email).stream()
+            selected_user = None
+            for u in user_ref:
+                selected_user = u.to_dict()
+                user_doc = u.id
+            
+            if selected_user:
+                st.write(f"Estrellas actuales: {selected_user.get('stars', 0)}")
+                st.write(f"Helados acumulados: {selected_user.get('helados', 0)}")
+                add_stars = st.number_input("Añadir estrellas", min_value=0, step=1)
+                add_helados = st.number_input("Añadir helados", min_value=0, step=1)
+                
+                if st.button("Actualizar recompensas"):
+                    new_stars = selected_user.get("stars", 0) + add_stars
+                    new_helados = selected_user.get("helados", 0) + add_helados
+                    db.collection("users").document(user_doc).update({"stars": new_stars, "helados": new_helados})
+                    st.success("Recompensas actualizadas correctamente.")
+            else:
+                st.error("Usuario no encontrado en la base de datos.")
         else:
             st.info("Escanea un QR o ingresa el correo manualmente.")
