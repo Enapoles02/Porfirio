@@ -7,8 +7,6 @@ import firebase_admin
 from datetime import datetime, timedelta
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 import av
-import cv2
-from pyzbar.pyzbar import decode
 
 # Inicializar Firebase si no está inicializado
 if not firebase_admin._apps:
@@ -23,18 +21,14 @@ def generate_qr(data):
     qr.save(buf, format="PNG")
     return buf.getvalue()
 
-# Procesador de video para escanear QR en vivo
+# Procesador de video para escanear QR en vivo sin OpenCV
 class QRScanner(VideoTransformerBase):
     def __init__(self):
         self.scanned_email = None
 
     def transform(self, frame):
         img = frame.to_ndarray(format="bgr24")
-        qr_codes = decode(img)
-        for qr in qr_codes:
-            self.scanned_email = qr.data.decode('utf-8')
-            break  # Solo tomar el primer QR detectado
-        return frame
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # Interfaz de la aplicación
 st.title("HELADOS BAHAMA 🍦")
@@ -80,5 +74,4 @@ else:
     if email == "nao.martinez2102@gmail.com":
         st.subheader("Escanear QR en vivo")
         ctx = webrtc_streamer(key="qr_scan", video_transformer_factory=QRScanner)
-        if ctx.video_transformer and ctx.video_transformer.scanned_email:
-            st.success(f"Correo escaneado: {ctx.video_transformer.scanned_email}")
+        st.info("La detección de QR aún no está implementada en este método.")
