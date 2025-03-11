@@ -6,3 +6,4 @@ pyzbar
 numpy
 qrcode[pil]
 opencv-python-headless
+zbar-py
