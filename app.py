@@ -74,6 +74,13 @@ else:
     st.image(qr_code, caption="Tu código QR para recompensas")
 
     if email == "nao.martinez2102@gmail.com":
-        st.subheader("Escanear QR en vivo")
+        st.subheader("Escanear QR en vivo o ingresar correo manualmente")
         ctx = webrtc_streamer(key="qr_scan", video_transformer_factory=QRScanner)
-        st.info("La detección de QR aún no está implementada en este método.")
+        scanned_email = ctx.video_transformer.scanned_email if ctx.video_transformer else None
+        manual_email = st.text_input("O ingresa el correo manualmente")
+        selected_email = scanned_email if scanned_email else manual_email
+        
+        if selected_email:
+            st.success(f"Correo seleccionado: {selected_email}")
+        else:
+            st.info("Escanea un QR o ingresa el correo manualmente.")
