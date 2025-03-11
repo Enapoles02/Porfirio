@@ -1,3 +1,6 @@
 streamlit
 firebase-admin
 streamlit-autorefresh
+opencv-python
+pyzbar
+numpy
