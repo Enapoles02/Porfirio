@@ -24,6 +24,24 @@ def generate_qr(data):
     qr.save(buf, format="PNG")
     return buf.getvalue()
 
+# Función para generar la barra de progreso de estrellas
+def generate_star_progress(stars):
+    level = "Green" if stars < 200 else "Oro"
+    filled_stars = stars % 200
+    total_blocks = 10
+    filled_blocks = min(total_blocks, filled_stars // 20)
+    
+    star_bar = "🟩" * filled_blocks + "⬜" * (total_blocks - filled_blocks)
+    drink_emojis = "🍹" * (stars // 100)
+    return f"Nivel: {level} | {star_bar} {drink_emojis}"
+
+# Función para generar la barra de progreso de helados
+def generate_icecream_progress(helados):
+    total_helados = 5
+    filled_icecreams = min(total_helados, helados)
+    icecream_bar = "🍦" * filled_icecreams + "⬜" * (total_helados - filled_icecreams)
+    return icecream_bar
+
 # Procesador de video para escanear QR en vivo sin OpenCV
 class QRScanner(VideoTransformerBase):
     def __init__(self):
@@ -45,7 +63,7 @@ if "user" not in st.session_state:
         new_password = st.text_input("Contraseña", type="password")
         if st.button("Registrar"):
             if new_email and new_password:
-                db.collection("users").add({"email": new_email, "password": new_password, "stars": 0, "level": "Normal", "helados": 0})
+                db.collection("users").add({"email": new_email, "password": new_password, "stars": 0, "level": "Green", "helados": 0})
                 st.success("Usuario registrado exitosamente. Ahora puedes iniciar sesión.")
             else:
                 st.error("Por favor, completa todos los campos.")
@@ -75,8 +93,8 @@ else:
     if email != "nao.martinez2102@gmail.com":
         qr_code = generate_qr(email)
         st.image(qr_code, caption="Tu código QR para recompensas")
-        st.write(f"Estrellas actuales: {user.get('stars', 0)}")
-        st.write(f"Helados acumulados: {user.get('helados', 0)}")
+        st.write(generate_star_progress(user.get('stars', 0)))
+        st.write(generate_icecream_progress(user.get('helados', 0)))
     
     if email == "nao.martinez2102@gmail.com":
         st.subheader("Escanear QR en vivo o ingresar correo manualmente")
@@ -95,9 +113,12 @@ else:
             
             if selected_user:
                 st.subheader("Asignar recompensas")
+                st.write("**Progreso de estrellas y helados:**")
+                st.write(generate_star_progress(selected_user.get('stars', 0)))
+                st.write(generate_icecream_progress(selected_user.get('helados', 0)))
+                
                 purchase_amount = st.number_input("Monto de la compra (MXN)", min_value=0.0, step=0.1)
                 add_helados = st.number_input("Añadir helados", min_value=0, step=1)
-                
                 calculated_stars = int(purchase_amount // 10)
                 
                 if st.button("Actualizar recompensas"):
@@ -105,6 +126,10 @@ else:
                     new_helados = selected_user.get("helados", 0) + add_helados
                     db.collection("users").document(user_doc).update({"stars": new_stars, "helados": new_helados})
                     st.success("Recompensas actualizadas correctamente.")
+                
+                if st.button("Redimir recompensa"):
+                    db.collection("users").document(user_doc).update({"stars": 0, "helados": 0})
+                    st.success("Recompensa redimida correctamente.")
             else:
                 st.error("Usuario no encontrado en la base de datos.")
         else:
