@@ -51,4 +51,4 @@ try:
     st.balloons()
     st.success("🎉 Conexión a Firestore exitosa")
 except Exception as e:
-    st.error(f"❌ Error al conectar con Firestore: {e
+    st.error(f"❌ Error al conectar con Firestore: {e")
