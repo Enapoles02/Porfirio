@@ -2,6 +2,8 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from datetime import datetime
+import random
+import string
 
 # -------------------- CONFIG --------------------
 st.set_page_config(page_title="Churreria & Helados App", layout="wide")
@@ -19,18 +21,17 @@ except Exception as e:
     st.stop()
 
 # -------------------- FUNCTIONS --------------------
+def generate_cliente_id(length=5):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
 def get_user(identifier):
     """Busca por correo o por cliente_id"""
-    # Primero intentar por correo
     doc = db.collection("usuarios").document(identifier).get()
     if doc.exists:
         return doc.to_dict()
-
-    # Buscar por cliente_id
     query = db.collection("usuarios").where("cliente_id", "==", identifier).limit(1).stream()
     for result in query:
         return result.to_dict()
-
     return None
 
 def save_user(email, data):
@@ -47,6 +48,19 @@ def update_points(identifier, stars_add=0, helados_add=0):
     user['canjear_helado'] = user['helados'] >= 6
     save_user(user['email'], user)
 
+def canjear_helado(identifier):
+    user = get_user(identifier)
+    if not user:
+        st.warning("Usuario no encontrado.")
+        return
+    if user['helados'] >= 6:
+        user['helados'] -= 6
+        user['canjear_helado'] = False
+        save_user(user['email'], user)
+        st.success("🎉 Helado canjeado exitosamente")
+    else:
+        st.warning("❌ No tiene suficientes helados para canjear")
+
 def show_user_summary(user):
     st.markdown(f"**Correo:** {user['email']}")
     st.markdown(f"**Número de cliente:** {user.get('cliente_id', 'No asignado')}")
@@ -55,6 +69,8 @@ def show_user_summary(user):
     st.markdown(f"**Helados acumulados:** 🍦 {user['helados']} / 6")
     if user['canjear_helado']:
         st.success("🎁 ¡Ya puede canjear un helado!")
+        if st.button("Canjear helado ahora"):
+            canjear_helado(user['email'])
 
 # -------------------- LOGIN --------------------
 menu = ["Registro", "Iniciar sesión", "Admin"]
@@ -64,11 +80,11 @@ if opcion == "Registro":
     st.subheader("Registro de usuario")
     email = st.text_input("Correo electrónico")
     password = st.text_input("Contraseña", type="password")
-    cliente_id = st.text_input("Número de cliente (opcional)").strip()
 
     if st.button("Registrarse"):
         try:
             auth.create_user(email=email, password=password)
+            cliente_id = generate_cliente_id()
             save_user(email, {
                 "email": email,
                 "cliente_id": cliente_id,
@@ -79,6 +95,7 @@ if opcion == "Registro":
                 "fecha_registro": datetime.now().isoformat()
             })
             st.success("✅ Usuario registrado con éxito")
+            st.info(f"Tu número de cliente es: {cliente_id}")
         except Exception as e:
             st.error(f"Error al registrar: {e}")
 
