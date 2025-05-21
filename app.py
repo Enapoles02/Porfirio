@@ -97,10 +97,7 @@ def canjear_helado(identifier):
     else:
         st.warning("❌ No tiene suficientes helados para canjear")
 
-def show_user_summary(user)
-            if st.button("Canjear bebida"):
-                log_action("canje", user['email'], "Canje de bebida desde Admin")
-                st.success("☕ Bebida canjeada"):
+def show_user_summary(user):
     st.markdown(f"**Correo:** {user['email']}")
     st.markdown(f"**Número de cliente:** {user.get('cliente_id', 'No asignado')}")
     st.markdown(f"**Nivel:** {'🥇 Gold' if user['nivel'] == 'gold' else '🥈 Green'}")
@@ -109,15 +106,20 @@ def show_user_summary(user)
     st.markdown("Estrellas acumuladas:")
     st.progress(progress_value, text=f"{user['estrellas']} / {progress_max}")
     st.markdown(f"**Helados acumulados:** 🍦 {user['helados']} / 6")
+
     if user['canjear_helado']:
         st.success("🎁 ¡Ya puede canjear un helado!")
         if st.button("Canjear helado ahora"):
             canjear_helado(user['email'])
+
     logs = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
     bebidas = sum(1 for log in logs)
     st.markdown("Bebidas ganadas:")
     st.markdown("".join(["☕ " for _ in range(bebidas)]))
-    st.info(f"☕ Bebidas ganadas por nivel oro: {bebidas}")
+
+    if opcion == "Admin" and st.button("Canjear bebida"):
+        log_action("canje", user['email'], "Canje de bebida desde Admin")
+        st.success("☕ Bebida canjeada")
 
 # -------------------- NAVEGACIÓN --------------------
 menu = ["Registro", "Iniciar sesión", "Admin"]
