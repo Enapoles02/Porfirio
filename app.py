@@ -96,9 +96,9 @@ def show_user_summary(user):
     st.markdown(f"**Número de cliente:** {user.get('cliente_id', 'No asignado')}")
     st.markdown(f"**Nivel:** {'🥇 Gold' if user['nivel'] == 'gold' else '🥈 Green'}")
     progress_max = 100 if user['nivel'] == 'gold' else 200
-    bar_color = 'gold' if user['nivel'] == 'gold' else 'green'
+    progress_value = min(user['estrellas'] / progress_max, 1.0)
     st.markdown("Estrellas acumuladas:")
-    st.progress(user['estrellas'] / progress_max, text=f"{user['estrellas']} / {progress_max}")
+    st.progress(progress_value, text=f"{user['estrellas']} / {progress_max}")
     st.markdown(f"**Helados acumulados:** 🍦 {user['helados']} / 6")
     if user['canjear_helado']:
         st.success("🎁 ¡Ya puede canjear un helado!")
