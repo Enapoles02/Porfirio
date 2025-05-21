@@ -20,6 +20,10 @@ except Exception as e:
     st.error(f"❌ Firebase error: {e}")
     st.stop()
 
+# -------------------- SESSION STATE --------------------
+if "usuario_actual" not in st.session_state:
+    st.session_state.usuario_actual = None
+
 # -------------------- FUNCTIONS --------------------
 def generate_cliente_id(length=5):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -59,10 +63,19 @@ def update_points(identifier, stars_add=0, helados_add=0):
         return
     user['estrellas'] += stars_add
     user['helados'] += helados_add
-    user['nivel'] = "gold" if user['estrellas'] >= 200 else "green"
+    recompensa_bebida = False
+    if user['nivel'] == "green" and user['estrellas'] >= 200:
+        user['nivel'] = "gold"
+        user['estrellas'] = 0
+        recompensa_bebida = True
+    elif user['nivel'] == "gold" and user['estrellas'] >= 100:
+        user['estrellas'] -= 100
+        recompensa_bebida = True
     user['canjear_helado'] = user['helados'] >= 6
     save_user(user['email'], user)
     log_action("consumo", user['email'], f"+{stars_add} estrellas, +{helados_add} helados")
+    if recompensa_bebida:
+        log_action("recompensa", user['email'], "🎁 Bebida gratis por nivel oro")
 
 def canjear_helado(identifier):
     user = get_user(identifier)
@@ -82,16 +95,26 @@ def show_user_summary(user):
     st.markdown(f"**Correo:** {user['email']}")
     st.markdown(f"**Número de cliente:** {user.get('cliente_id', 'No asignado')}")
     st.markdown(f"**Nivel:** {'🥇 Gold' if user['nivel'] == 'gold' else '🥈 Green'}")
-    st.markdown(f"**Estrellas:** ⭐ {user['estrellas']} / 200")
+    progress_max = 100 if user['nivel'] == 'gold' else 200
+    bar_color = 'gold' if user['nivel'] == 'gold' else 'green'
+    st.markdown("Estrellas acumuladas:")
+    st.progress(user['estrellas'] / progress_max, text=f"{user['estrellas']} / {progress_max}")
     st.markdown(f"**Helados acumulados:** 🍦 {user['helados']} / 6")
     if user['canjear_helado']:
         st.success("🎁 ¡Ya puede canjear un helado!")
         if st.button("Canjear helado ahora"):
             canjear_helado(user['email'])
 
-# -------------------- LOGIN --------------------
+# -------------------- NAVEGACIÓN --------------------
 menu = ["Registro", "Iniciar sesión", "Admin"]
 opcion = st.sidebar.selectbox("Selecciona una opción", menu)
+
+if st.session_state.usuario_actual:
+    user = get_user(st.session_state.usuario_actual)
+    if user:
+        st.success(f"Bienvenido {user['email']}")
+        show_user_summary(user)
+    st.stop()
 
 if opcion == "Registro":
     st.subheader("Registro de usuario")
@@ -124,8 +147,8 @@ elif opcion == "Iniciar sesión":
     if st.button("Iniciar sesión"):
         user = get_user(identifier)
         if user:
-            st.success(f"Bienvenido {user['email']}")
-            show_user_summary(user)
+            st.session_state.usuario_actual = user['email']
+            st.rerun()
         else:
             st.error("Usuario no encontrado.")
 
