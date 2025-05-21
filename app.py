@@ -95,7 +95,11 @@ def canjear_helado(identifier):
     else:
         st.warning("❌ No tiene suficientes helados para canjear")
 
-def show_user_summary(user):
+def show_user_summary(user)
+            # Mostrar resumen de bebidas ganadas
+            logs = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
+            bebidas = sum(1 for log in logs)
+            st.info(f"☕ Bebidas ganadas por nivel oro: {bebidas}"):
     st.markdown(f"**Correo:** {user['email']}")
     st.markdown(f"**Número de cliente:** {user.get('cliente_id', 'No asignado')}")
     st.markdown(f"**Nivel:** {'🥇 Gold' if user['nivel'] == 'gold' else '🥈 Green'}")
@@ -118,6 +122,10 @@ if st.session_state.usuario_actual:
     if user:
         st.success(f"Bienvenido {user['email']}")
         show_user_summary(user)
+            # Mostrar resumen de bebidas ganadas
+            logs = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
+            bebidas = sum(1 for log in logs)
+            st.info(f"☕ Bebidas ganadas por nivel oro: {bebidas}")
     st.stop()
 
 if opcion == "Registro":
@@ -189,6 +197,10 @@ elif opcion == "Admin":
                 user = get_user(identificador_cliente)
                 if user:
                     show_user_summary(user)
+            # Mostrar resumen de bebidas ganadas
+            logs = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
+            bebidas = sum(1 for log in logs)
+            st.info(f"☕ Bebidas ganadas por nivel oro: {bebidas}")
 
         elif tipo == "Helados":
             cantidad = st.number_input("Cantidad de helados", min_value=1, step=1)
@@ -197,6 +209,40 @@ elif opcion == "Admin":
                 user = get_user(identificador_cliente)
                 if user:
                     show_user_summary(user)
+
+            st.markdown("---")
+            st.markdown("### Canjear helado directamente")
+            if st.button("Canjear helado"):
+                canjear_helado(identificador_cliente)
+                user = get_user(identificador_cliente)
+                if user:
+                    show_user_summary(user)
+            cantidad = st.number_input("Cantidad de helados", min_value=1, step=1)
+            if st.button("Registrar consumo"):
+                update_points(identificador_cliente, helados_add=int(cantidad))
+                user = get_user(identificador_cliente)
+                if user:
+                    show_user_summary(user)
+            # Mostrar resumen de bebidas ganadas
+            logs = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
+            bebidas = sum(1 for log in logs)
+            st.info(f"☕ Bebidas ganadas por nivel oro: {bebidas}")
+
+            st.markdown("---")
+            st.markdown("### Canjear helado directamente")
+            if st.button("Canjear helado"):
+                canjear_helado(identificador_cliente)
+                user = get_user(identificador_cliente)
+                if user:
+                    show_user_summary(user)
+            # Mostrar resumen de bebidas ganadas
+            logs = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
+            bebidas = sum(1 for log in logs)
+            st.info(f"☕ Bebidas ganadas por nivel oro: {bebidas}")
+                    show_user_summary(user)
+            # Mostrar resumen de bebidas ganadas
+            logs = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
+            bebidas = sum(1 for log in logs)
+            st.info(f"☕ Bebidas ganadas por nivel oro: {bebidas}")
     else:
         st.error("Acceso denegado. Solo el admin puede ingresar.")
-
