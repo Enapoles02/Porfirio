@@ -83,7 +83,6 @@ if opcion == "Registro":
 
     if st.button("Registrarse"):
         try:
-            auth.create_user(email=email, password=password)
             cliente_id = generate_cliente_id()
             save_user(email, {
                 "email": email,
