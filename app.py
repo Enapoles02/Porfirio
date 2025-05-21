@@ -1,6 +1,6 @@
 import streamlit as st
 import firebase_admin
-from firebase_admin import credentials, firestore, auth
+from firebase_admin import credentials, firestore
 from datetime import datetime
 import random
 import string
@@ -25,7 +25,6 @@ def generate_cliente_id(length=5):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 def get_user(identifier):
-    """Busca por correo o por cliente_id"""
     doc = db.collection("usuarios").document(identifier).get()
     if doc.exists:
         return doc.to_dict()
@@ -35,7 +34,11 @@ def get_user(identifier):
     return None
 
 def save_user(email, data):
-    db.collection("usuarios").document(email).set(data)
+    try:
+        db.collection("usuarios").document(email).set(data)
+        st.write(f"✅ Usuario guardado con email: {email}")
+    except Exception as e:
+        st.error(f"❌ Error al guardar en Firestore: {e}")
 
 def update_points(identifier, stars_add=0, helados_add=0):
     user = get_user(identifier)
@@ -84,7 +87,8 @@ if opcion == "Registro":
     if st.button("Registrarse"):
         try:
             cliente_id = generate_cliente_id()
-            save_user(email, {
+            st.write("🛠 Generando datos del cliente...")
+            data = {
                 "email": email,
                 "cliente_id": cliente_id,
                 "nivel": "green",
@@ -92,7 +96,8 @@ if opcion == "Registro":
                 "helados": 0,
                 "canjear_helado": False,
                 "fecha_registro": datetime.now().isoformat()
-            })
+            }
+            save_user(email, data)
             st.success("✅ Usuario registrado con éxito")
             st.info(f"Tu número de cliente es: {cliente_id}")
         except Exception as e:
