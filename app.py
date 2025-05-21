@@ -112,13 +112,16 @@ def show_user_summary(user):
         if st.button("Canjear helado ahora"):
             canjear_helado(user['email'])
 
-    logs = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
-    bebidas = sum(1 for log in logs)
+    logs_ganadas = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
+    logs_canjeadas = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "canje_bebida").stream()
+    bebidas_ganadas = sum(1 for log in logs_ganadas)
+    bebidas_canjeadas = sum(1 for log in logs_canjeadas)
+    bebidas = max(bebidas_ganadas - bebidas_canjeadas, 0)
     st.markdown("Bebidas ganadas:")
     st.markdown("".join(["☕ " for _ in range(bebidas)]))
 
     if opcion == "Admin" and bebidas > 0 and st.button("Canjear bebida"):
-        log_action("canje", user['email'], "Canje de bebida desde Admin")
+        log_action("canje_bebida", user['email'], "Canje de bebida desde Admin")
         st.success("☕ Bebida canjeada")
         bebidas -= 1
 
