@@ -147,20 +147,20 @@ if opcion == "Registro":
             st.stop()
 
         cliente_id = generate_cliente_id()
-            data = {
-                "email": email,
-                "cliente_id": cliente_id,
-                "nivel": "green",
-                "estrellas": 0,
-                "helados": 0,
-                "canjear_helado": False,
-                "fecha_registro": datetime.now().isoformat()
-            }
-            save_user(email, data)
-            st.success("✅ Usuario registrado con éxito")
-            st.info(f"Tu número de cliente es: {cliente_id}")
-        except Exception as e:
-            st.error(f"Error al registrar: {e}")
+        data = {
+            "email": email,
+            "cliente_id": cliente_id,
+            "nivel": "green",
+            "estrellas": 0,
+            "helados": 0,
+            "canjear_helado": False,
+            "fecha_registro": datetime.now().isoformat()
+        }
+        save_user(email, data)
+        st.success("✅ Usuario registrado con éxito")
+        st.info(f"Tu número de cliente es: {cliente_id}")
+    except Exception as e:
+        st.error(f"Error al registrar: {e}")
 
 elif opcion == "Iniciar sesión":
     st.subheader("Inicio de sesión")
