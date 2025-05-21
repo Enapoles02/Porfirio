@@ -117,9 +117,10 @@ def show_user_summary(user):
     st.markdown("Bebidas ganadas:")
     st.markdown("".join(["☕ " for _ in range(bebidas)]))
 
-    if opcion == "Admin" and st.button("Canjear bebida"):
+    if opcion == "Admin" and bebidas > 0 and st.button("Canjear bebida"):
         log_action("canje", user['email'], "Canje de bebida desde Admin")
         st.success("☕ Bebida canjeada")
+        bebidas -= 1
 
 # -------------------- NAVEGACIÓN --------------------
 menu = ["Registro", "Iniciar sesión", "Admin"]
