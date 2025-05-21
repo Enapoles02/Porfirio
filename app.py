@@ -64,18 +64,22 @@ def update_points(identifier, stars_add=0, helados_add=0):
     user['estrellas'] += stars_add
     user['helados'] += helados_add
     recompensa_bebida = False
+
     if user['nivel'] == "green" and user['estrellas'] >= 200:
         user['nivel'] = "gold"
         user['estrellas'] = 0
         recompensa_bebida = True
-    elif user['nivel'] == "gold" and user['estrellas'] >= 100:
-        user['estrellas'] -= 100
-        recompensa_bebida = True
+    elif user['nivel'] == "gold":
+        total_estrellas = user['estrellas']
+        bebidas = total_estrellas // 100
+        user['estrellas'] = total_estrellas % 100
+        for _ in range(bebidas):
+            recompensa_bebida = True
+            log_action("recompensa", user['email'], "🎁 Bebida gratis por cada 100 estrellas en nivel oro")
+
     user['canjear_helado'] = user['helados'] >= 6
     save_user(user['email'], user)
     log_action("consumo", user['email'], f"+{stars_add} estrellas, +{helados_add} helados")
-    if recompensa_bebida:
-        log_action("recompensa", user['email'], "🎁 Bebida gratis por nivel oro")
 
 def canjear_helado(identifier):
     user = get_user(identifier)
@@ -104,81 +108,3 @@ def show_user_summary(user):
         st.success("🎁 ¡Ya puede canjear un helado!")
         if st.button("Canjear helado ahora"):
             canjear_helado(user['email'])
-
-# -------------------- NAVEGACIÓN --------------------
-menu = ["Registro", "Iniciar sesión", "Admin"]
-opcion = st.sidebar.selectbox("Selecciona una opción", menu)
-
-if st.session_state.usuario_actual:
-    user = get_user(st.session_state.usuario_actual)
-    if user:
-        st.success(f"Bienvenido {user['email']}")
-        show_user_summary(user)
-    st.stop()
-
-if opcion == "Registro":
-    st.subheader("Registro de usuario")
-    email = st.text_input("Correo electrónico")
-    password = st.text_input("Contraseña", type="password")
-
-    if st.button("Registrarse"):
-        try:
-            cliente_id = generate_cliente_id()
-            st.write("🛠 Generando datos del cliente...")
-            data = {
-                "email": email,
-                "cliente_id": cliente_id,
-                "nivel": "green",
-                "estrellas": 0,
-                "helados": 0,
-                "canjear_helado": False,
-                "fecha_registro": datetime.now().isoformat()
-            }
-            save_user(email, data)
-            st.success("✅ Usuario registrado con éxito")
-            st.info(f"Tu número de cliente es: {cliente_id}")
-        except Exception as e:
-            st.error(f"Error al registrar: {e}")
-
-elif opcion == "Iniciar sesión":
-    st.subheader("Inicio de sesión")
-    identifier = st.text_input("Correo o número de cliente")
-    password = st.text_input("Contraseña", type="password")
-    if st.button("Iniciar sesión"):
-        user = get_user(identifier)
-        if user:
-            st.session_state.usuario_actual = user['email']
-            st.rerun()
-        else:
-            st.error("Usuario no encontrado.")
-
-elif opcion == "Admin":
-    st.subheader("👑 Panel del Administrador")
-    admin_data = st.secrets.get("admin_credentials", None)
-    admin_email = st.text_input("Correo de Admin")
-    admin_pass = st.text_input("Contraseña Admin", type="password")
-
-    if admin_data and admin_email == admin_data["email"] and admin_pass == admin_data["password"]:
-        st.success("Acceso autorizado como admin")
-
-        tipo = st.radio("Tipo de recompensa", ["Churrería", "Helados"])
-        identificador_cliente = st.text_input("Correo o número del cliente")
-
-        if tipo == "Churrería":
-            monto = st.number_input("Monto de compra ($MXN)", min_value=0, step=10)
-            if st.button("Registrar compra"): 
-                estrellas = int(monto / 10)
-                update_points(identificador_cliente, stars_add=estrellas)
-                user = get_user(identificador_cliente)
-                if user:
-                    show_user_summary(user)
-
-        elif tipo == "Helados":
-            cantidad = st.number_input("Cantidad de helados", min_value=1, step=1)
-            if st.button("Registrar consumo"):
-                update_points(identificador_cliente, helados_add=int(cantidad))
-                user = get_user(identificador_cliente)
-                if user:
-                    show_user_summary(user)
-    else:
-        st.error("Acceso denegado. Solo el admin puede ingresar.")
