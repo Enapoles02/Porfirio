@@ -155,6 +155,8 @@ elif opcion == "Iniciar sesión":
             st.error("Usuario no encontrado.")
 
 elif opcion == "Admin":
+    if "cliente_confirmado" not in st.session_state:
+        st.session_state.cliente_confirmado = None
     st.subheader("👑 Panel del Administrador")
     admin_data = st.secrets.get("admin_credentials", None)
     admin_email = st.text_input("Correo de Admin")
@@ -165,6 +167,19 @@ elif opcion == "Admin":
 
         tipo = st.radio("Tipo de recompensa", ["Churrería", "Helados"])
         identificador_cliente = st.text_input("Correo o número del cliente")
+        if st.button("Confirmar cliente"):
+            user_preview = get_user(identificador_cliente)
+            if user_preview:
+                st.session_state.cliente_confirmado = identificador_cliente
+                st.success(f"Cliente encontrado: {user_preview['email']}")
+                show_user_summary(user_preview)
+            else:
+                st.error("Cliente no encontrado.")
+
+        if not st.session_state.cliente_confirmado:
+            st.stop()
+
+        identificador_cliente = st.session_state.cliente_confirmado
 
         if tipo == "Churrería":
             monto = st.number_input("Monto de compra ($MXN)", min_value=0, step=10)
@@ -184,3 +199,4 @@ elif opcion == "Admin":
                     show_user_summary(user)
     else:
         st.error("Acceso denegado. Solo el admin puede ingresar.")
+
