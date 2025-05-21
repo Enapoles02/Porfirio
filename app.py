@@ -85,7 +85,9 @@ elif opcion == "Admin":
     admin_email = st.text_input("Correo de Admin")
     admin_pass = st.text_input("Contraseña Admin", type="password")
 
-    if admin_email == "nao.martinez2102@gmail.com" and admin_pass == "123frambuesa":
+    admin_data = st.secrets["admin_credentials"]
+    if admin_email == admin_data["email"] and admin_pass == admin_data["password"]:
+
         st.success("Acceso autorizado como admin")
 
         tipo = st.radio("Tipo de recompensa", ["Churrería", "Helados"])
