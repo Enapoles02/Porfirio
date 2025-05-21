@@ -141,8 +141,12 @@ if opcion == "Registro":
     email = st.text_input("Correo electrónico")
     password = st.text_input("Contraseña", type="password")
     if st.button("Registrarse"):
-        try:
-            cliente_id = generate_cliente_id()
+    try:
+        if get_user(email):
+            st.error("❌ Este correo ya está registrado. Usa otro.")
+            st.stop()
+
+        cliente_id = generate_cliente_id()
             data = {
                 "email": email,
                 "cliente_id": cliente_id,
