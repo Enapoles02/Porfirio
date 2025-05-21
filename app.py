@@ -33,10 +33,22 @@ def get_user(identifier):
         return result.to_dict()
     return None
 
+def log_action(action_type, usuario, detalle=""):
+    try:
+        db.collection("logs").add({
+            "accion": action_type,
+            "usuario": usuario,
+            "detalle": detalle,
+            "fecha": datetime.now().isoformat()
+        })
+    except Exception as e:
+        st.warning(f"⚠️ Error al guardar log: {e}")
+
 def save_user(email, data):
     try:
         db.collection("usuarios").document(email).set(data)
         st.write(f"✅ Usuario guardado con email: {email}")
+        log_action("registro", email)
     except Exception as e:
         st.error(f"❌ Error al guardar en Firestore: {e}")
 
@@ -50,6 +62,7 @@ def update_points(identifier, stars_add=0, helados_add=0):
     user['nivel'] = "gold" if user['estrellas'] >= 200 else "green"
     user['canjear_helado'] = user['helados'] >= 6
     save_user(user['email'], user)
+    log_action("consumo", user['email'], f"+{stars_add} estrellas, +{helados_add} helados")
 
 def canjear_helado(identifier):
     user = get_user(identifier)
@@ -61,6 +74,7 @@ def canjear_helado(identifier):
         user['canjear_helado'] = False
         save_user(user['email'], user)
         st.success("🎉 Helado canjeado exitosamente")
+        log_action("canje", user['email'], "Canje de helado (6 helados)")
     else:
         st.warning("❌ No tiene suficientes helados para canjear")
 
