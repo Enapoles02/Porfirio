@@ -202,7 +202,11 @@ def create_payment_link(total_amount: float, description: str = "Pedido Churrer�
 
 def render_menu_picker(cart_key: str = "cart_pickup"):
     st.subheader("🧾 Menú")
-    cat = st.selectbox("Filtrar por categoría", options=["Todas"] + sorted({m['category'] for m in DEFAULT_MENU}))
+    cat = st.selectbox(
+    "Filtrar por categoría",
+    options=["Todas"] + sorted({m['category'] for m in DEFAULT_MENU}),
+    key=f"cat_select_{cart_key}"   # 👈 evita duplicados
+)
     cols = st.columns(3)
     filtered = [m for m in DEFAULT_MENU if m.get("active") and (cat == "Todas" or m['category'] == cat)]
     for i, m in enumerate(filtered):
