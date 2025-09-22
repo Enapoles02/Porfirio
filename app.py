@@ -50,6 +50,36 @@ if "cart_mesa" not in ss:
     ss.cart_mesa = []
 
 # -------------------------------------------------------------
+# MENÚ (lista fija inicial; luego podemos migrar a Firestore)
+DEFAULT_MENU: List[Dict[str, Any]] = [
+    {"id": "espresso", "name": "Espresso", "category": "Bebidas", "price": 45, "station": "barista", "prep_time": 180, "active": True},
+    {"id": "americano", "name": "Americano", "category": "Bebidas", "price": 45, "station": "barista", "prep_time": 180, "active": True},
+    {"id": "cafe_olla", "name": "Café de olla", "category": "Bebidas", "price": 50, "station": "barista", "prep_time": 240, "active": True},
+    {"id": "capuccino", "name": "Capuccino", "category": "Bebidas", "price": 70, "station": "barista", "prep_time": 240, "active": True},
+    {"id": "latte", "name": "Café Latte", "category": "Bebidas", "price": 70, "station": "barista", "prep_time": 240, "active": True},
+    {"id": "chai_latte", "name": "Chai Latte", "category": "Bebidas", "price": 75, "station": "barista", "prep_time": 300, "active": True},
+    {"id": "te", "name": "Té", "category": "Bebidas", "price": 45, "station": "barista", "prep_time": 180, "active": True},
+    {"id": "granizado", "name": "Granizado", "category": "Bebidas", "price": 89, "station": "barista", "prep_time": 300, "active": True},
+    {"id": "malteada_chica", "name": "Malteada (chica)", "category": "Bebidas", "price": 99, "station": "barista", "prep_time": 300, "active": True},
+    {"id": "malteada_grande", "name": "Malteada (grande)", "category": "Bebidas", "price": 115, "station": "barista", "prep_time": 300, "active": True},
+    {"id": "refresco", "name": "Refresco", "category": "Bebidas", "price": 45, "station": "barista", "prep_time": 30, "active": True},
+    {"id": "agua", "name": "Agua", "category": "Bebidas", "price": 30, "station": "barista", "prep_time": 10, "active": True},
+    {"id": "churros_3", "name": "Churros (3 pzas)", "category": "Churros", "price": 39, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "per_unit_type": "tradicional", "active": True},
+    {"id": "churros_6", "name": "Churros (6 pzas)", "category": "Churros", "price": 69, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "per_unit_type": "tradicional", "active": True},
+    {"id": "churros_12", "name": "Churros (12 pzas)", "category": "Churros", "price": 129, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "per_unit_type": "tradicional", "active": True},
+    {"id": "relleno_1", "name": "Churro relleno (1 pza)", "category": "Churros", "price": 35, "station": "fryer", "prep_time": 180, "batch_capacity": 3, "per_unit_type": "relleno", "active": True},
+    {"id": "relleno_3", "name": "Churro relleno (3 pzas)", "category": "Churros", "price": 99, "station": "fryer", "prep_time": 180, "batch_capacity": 3, "per_unit_type": "relleno", "active": True},
+    {"id": "carlota", "name": "Carlota", "category": "Postres", "price": 75, "station": "fryer", "prep_time": 240, "batch_capacity": 1, "per_unit_type": "carlota", "active": True},
+    {"id": "bunuelos_2", "name": "Buñuelos (2 pzas)", "category": "Postres", "price": 49, "station": "stock", "prep_time": 0, "active": True},
+    {"id": "promo_recordando", "name": "Recordando viejos tiempos", "category": "Promoción", "price": 229, "station": "mix", "prep_time": 0, "active": True},
+    {"id": "promo_dulce_dia", "name": "Empieza un dulce día", "category": "Promoción", "price": 69, "station": "mix", "prep_time": 0, "active": True},
+    {"id": "promo_congelando", "name": "Congelando momentos", "category": "Promoción", "price": 99, "station": "mix", "prep_time": 0, "active": True},
+]
+
+MENU_INDEX: Dict[str, Dict[str, Any]] = {m['id']: m for m in DEFAULT_MENU}
+FRYER_BASKETS = 2
+
+# -------------------------------------------------------------
 # UTILIDADES
 
 def now_cdmx() -> datetime:
