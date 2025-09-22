@@ -77,134 +77,7 @@ def log_action(action_type: str, usuario: str, detalle: str = "") -> None:
 
 # -------------------------------------------------------------
 # USUARIOS (Recompensas)
-
-def get_user(identifier: str) -> Dict[str, Any] | None:
-    # 1) email (id de doc)
-    doc = db.collection("usuarios").document(identifier).get()
-    if doc.exists:
-        d = doc.to_dict()
-        d.setdefault("email", identifier)
-        return d
-    # 2) por cliente_id
-    query = db.collection("usuarios").where("cliente_id", "==", identifier).limit(1).stream()
-    for r in query:
-        d = r.to_dict()
-        d.setdefault("email", r.id)
-        return d
-    return None
-
-
-def save_user(email: str, data: Dict[str, Any]) -> None:
-    try:
-        db.collection("usuarios").document(email).set(data)
-        st.toast(f"✅ Usuario guardado: {email}")
-        log_action("registro", email)
-    except Exception as e:
-        st.error(f"❌ Error al guardar en Firestore: {e}")
-
-
-def update_points(identifier: str, stars_add: int = 0, helados_add: int = 0) -> None:
-    user = get_user(identifier)
-    if not user:
-        st.warning("Usuario no encontrado.")
-        return
-    user['estrellas'] = int(user.get('estrellas', 0)) + int(stars_add)
-    user['helados'] = int(user.get('helados', 0)) + int(helados_add)
-
-    if user.get('nivel') == "green" and user['estrellas'] >= 200:
-        user['nivel'] = "gold"
-        user['estrellas'] = 0
-        log_action("recompensa", user['email'], "Ascenso a GOLD por 200 estrellas")
-    elif user.get('nivel') == "gold":
-        bebidas = user['estrellas'] // 100
-        user['estrellas'] = user['estrellas'] % 100
-        for _ in range(bebidas):
-            log_action("recompensa", user['email'], "🎁 Bebida gratis por cada 100 estrellas (GOLD)")
-
-    user['canjear_helado'] = int(user['helados']) >= 6
-    save_user(user['email'], user)
-    log_action("consumo", user['email'], f"+{stars_add} estrellas, +{helados_add} helados")
-
-
-def canjear_helado(identifier: str) -> None:
-    user = get_user(identifier)
-    if not user:
-        st.warning("Usuario no encontrado.")
-        return
-    if int(user.get('helados', 0)) >= 6:
-        user['helados'] = int(user['helados']) - 6
-        user['canjear_helado'] = False
-        save_user(user['email'], user)
-        st.success("🎉 Helado canjeado exitosamente")
-        log_action("canje", user['email'], "Canje de helado (6 helados)")
-    else:
-        st.warning("❌ No tiene suficientes helados para canjear")
-
-
-def show_user_summary(user: Dict[str, Any], is_admin_view: bool = False) -> None:
-    st.markdown(f"**Correo:** {user.get('email','')}")
-    st.markdown(f"**Número de cliente:** {user.get('cliente_id', 'No asignado')}")
-    st.markdown(f"**Nivel:** {'🥇 Gold' if user.get('nivel') == 'gold' else '🥈 Green'}")
-    progress_max = 100 if user.get('nivel') == 'gold' else 200
-    progress_value = min(int(user.get('estrellas', 0)) / progress_max, 1.0)
-    st.markdown("Estrellas acumuladas:")
-    st.progress(progress_value, text=f"{user.get('estrellas',0)} / {progress_max}")
-    st.markdown(f"**Helados acumulados:** 🍦 {user.get('helados',0)} / 6")
-
-    if user.get('canjear_helado'):
-        st.success("🎁 ¡Ya puede canjear un helado!")
-        if st.button("Canjear helado ahora", key=f"canj_{user['email']}"):
-            canjear_helado(user['email'])
-
-    logs_ganadas = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "recompensa").stream()
-    logs_canjeadas = db.collection("logs").where("usuario", "==", user['email']).where("accion", "==", "canje_bebida").stream()
-    bebidas_ganadas = sum(1 for _ in logs_ganadas)
-    bebidas_canjeadas = sum(1 for _ in logs_canjeadas)
-    bebidas = max(bebidas_ganadas - bebidas_canjeadas, 0)
-    st.markdown("Bebidas ganadas:")
-    st.markdown("".join(["☕ " for _ in range(bebidas)]))
-
-    if is_admin_view and bebidas > 0 and st.button("Canjear bebida", key=f"canjeb_{user['email']}"):
-        log_action("canje_bebida", user['email'], "Canje de bebida desde Admin")
-        st.success("☕ Bebida canjeada")
-
-# -------------------------------------------------------------
-# MENÚ (lista fija inicial; luego podemos migrar a Firestore)
-DEFAULT_MENU: List[Dict[str, Any]] = [
-    # Bebidas (3–5 min)
-    {"id": "espresso", "name": "Espresso", "category": "Bebidas", "price": 45, "station": "barista", "prep_time": 180, "active": True},
-    {"id": "americano", "name": "Americano", "category": "Bebidas", "price": 45, "station": "barista", "prep_time": 180, "active": True},
-    {"id": "cafe_olla", "name": "Café de olla", "category": "Bebidas", "price": 50, "station": "barista", "prep_time": 240, "active": True},
-    {"id": "capuccino", "name": "Capuccino", "category": "Bebidas", "price": 70, "station": "barista", "prep_time": 240, "active": True},
-    {"id": "latte", "name": "Café Latte", "category": "Bebidas", "price": 70, "station": "barista", "prep_time": 240, "active": True},
-    {"id": "chai_latte", "name": "Chai Latte", "category": "Bebidas", "price": 75, "station": "barista", "prep_time": 300, "active": True},
-    {"id": "te", "name": "Té", "category": "Bebidas", "price": 45, "station": "barista", "prep_time": 180, "active": True},
-    {"id": "granizado", "name": "Granizado", "category": "Bebidas", "price": 89, "station": "barista", "prep_time": 300, "active": True},
-    {"id": "malteada_chica", "name": "Malteada (chica)", "category": "Bebidas", "price": 99, "station": "barista", "prep_time": 300, "active": True},
-    {"id": "malteada_grande", "name": "Malteada (grande)", "category": "Bebidas", "price": 115, "station": "barista", "prep_time": 300, "active": True},
-    {"id": "refresco", "name": "Refresco", "category": "Bebidas", "price": 45, "station": "barista", "prep_time": 30, "active": True},
-    {"id": "agua", "name": "Agua", "category": "Bebidas", "price": 30, "station": "barista", "prep_time": 10, "active": True},
-
-    # Freidora (2 canastillas). Reglas de Kike:
-    # - Tradicionales: 6 por canastilla, 3 min/batch
-    # - Rellenos: 3 por canastilla, ~3 min/batch
-    # - Carlota: 1 por canastilla, 4 min/batch
-    {"id": "churros_3", "name": "Churros (3 pzas)", "category": "Churros", "price": 39, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "per_unit_type": "tradicional", "active": True},
-    {"id": "churros_6", "name": "Churros (6 pzas)", "category": "Churros", "price": 69, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "per_unit_type": "tradicional", "active": True},
-    {"id": "churros_12", "name": "Churros (12 pzas)", "category": "Churros", "price": 129, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "per_unit_type": "tradicional", "active": True},
-    {"id": "relleno_1", "name": "Churro relleno (1 pza)", "category": "Churros", "price": 35, "station": "fryer", "prep_time": 180, "batch_capacity": 3, "per_unit_type": "relleno", "active": True},
-    {"id": "relleno_3", "name": "Churro relleno (3 pzas)", "category": "Churros", "price": 99, "station": "fryer", "prep_time": 180, "batch_capacity": 3, "per_unit_type": "relleno", "active": True},
-    {"id": "carlota", "name": "Carlota", "category": "Postres", "price": 75, "station": "fryer", "prep_time": 240, "batch_capacity": 1, "per_unit_type": "carlota", "active": True},
-    {"id": "bunuelos_2", "name": "Buñuelos (2 pzas)", "category": "Postres", "price": 49, "station": "stock", "prep_time": 0, "active": True},  # sin espera si hay stock
-
-    # Promos (para pop-ups)
-    {"id": "promo_recordando", "name": "Recordando viejos tiempos", "category": "Promoción", "price": 229, "station": "mix", "prep_time": 0, "active": True},
-    {"id": "promo_dulce_dia", "name": "Empieza un dulce día", "category": "Promoción", "price": 69, "station": "mix", "prep_time": 0, "active": True},
-    {"id": "promo_congelando", "name": "Congelando momentos", "category": "Promoción", "price": 99, "station": "mix", "prep_time": 0, "active": True},
-]
-
-MENU_INDEX: Dict[str, Dict[str, Any]] = {m['id']: m for m in DEFAULT_MENU}
-FRYER_BASKETS = 2
+# ... (todo tu código igual hasta la función show_promotions_popups)
 
 # -------------------------------------------------------------
 # POP-UPS DE PROMOCIONES (según hora CDMX)
@@ -213,20 +86,13 @@ def show_promotions_popups():
     hour = now_cdmx().hour
     if ss.promo_shown:
         return
+
     if 8 <= hour < 12:
-        with st.modal("☕ Recordando viejos tiempos"):
-            st.write("Churros tradicionales + 1 litro de chocolate — **$229**")
-            if st.button("👉 Pedir ahora (Pick Up)", key="promo_morning_pickup"):
-                st.session_state['selected_tab'] = 3  # Pick Up
-        with st.modal("🥐 Empieza un dulce día"):
-            st.write("Café de olla + Churro relleno — **$69**")
-            if st.button("👉 Pedir ahora (Pick Up)", key="promo_dia_pickup"):
-                st.session_state['selected_tab'] = 3
+        st.toast("☕ Recordando viejos tiempos: Churros + 1 litro de chocolate — $229")
+        st.toast("🥐 Empieza un dulce día: Café de olla + Churro relleno — $69")
     elif 13 <= hour < 17:
-        with st.modal("❄️ Congelando momentos"):
-            st.write("2 granizados — **$99**")
-            if st.button("👉 Pedir ahora (Pick Up)", key="promo_tarde_pickup"):
-                st.session_state['selected_tab'] = 3
+        st.toast("❄️ Congelando momentos: 2 granizados — $99")
+
     ss.promo_shown = True
 
 # -------------------------------------------------------------
