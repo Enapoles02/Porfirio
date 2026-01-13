@@ -120,7 +120,93 @@ def show_user_summary(user: Dict[str, Any], is_admin_view: bool = False) -> None
             canjear_helado(user['email'])
 
 # ---------------- MENÚ ----------------
-DEFAULT_MENU = [...]  # (Contenido idéntico al original, no modificado)
+DEFAULT_MENU = [
+
+    # =====================
+    # CHURROS
+    # =====================
+    {"id": "churro_3", "name": "Churros tradicionales (3 pzas)", "category": "Churros", "price": 49},
+    {"id": "churro_6", "name": "Churros tradicionales (6 pzas)", "category": "Churros", "price": 79},
+    {"id": "churro_12", "name": "Churros tradicionales (12 pzas)", "category": "Churros", "price": 149},
+
+    {"id": "churro_relleno_1", "name": "Churro relleno (1 pza)", "category": "Rellenos", "price": 35},
+    {"id": "churro_relleno_3", "name": "Churros rellenos (3 pzas)", "category": "Rellenos", "price": 99},
+
+    {"id": "mini_churros", "name": "Mini churros (15 pzas)", "category": "Mini Churros", "price": 79},
+
+    # =====================
+    # POSTRES
+    # =====================
+    {"id": "bunuelos", "name": "Buñuelos (2 pzas)", "category": "Postres", "price": 49},
+    {"id": "carlota", "name": "Carlota (fresa, vainilla o chocolate)", "category": "Postres", "price": 75},
+    {"id": "adelitas", "name": "Adelitas (queso / española / jamón y queso)", "category": "Postres", "price": 139},
+
+    {"id": "salsa_extra", "name": "Salsa extra (cajeta / chocolate / lechera)", "category": "Extras", "price": 15},
+
+    # =====================
+    # DESAYUNOS
+    # =====================
+    {"id": "chilaquiles", "name": "Chilaquiles (salsa verde o roja)", "category": "Desayunos", "price": 149},
+    {"id": "enchiladas", "name": "Enchiladas (salsa verde o roja)", "category": "Desayunos", "price": 149},
+    {"id": "enfrijoladas", "name": "Enfrijoladas", "category": "Desayunos", "price": 149},
+    {"id": "molletes", "name": "Molletes", "category": "Desayunos", "price": 139},
+    {"id": "sincronizadas", "name": "Sincronizadas", "category": "Desayunos", "price": 129},
+
+    # =====================
+    # PROMOCIONES
+    # =====================
+    {
+        "id": "promo_viejos_tiempos",
+        "name": "Recordando viejos tiempos (1L chocolate + 6 churros)",
+        "category": "Promociones",
+        "price": 229,
+        "schedule": "08:00-12:00"
+    },
+    {
+        "id": "promo_dulce_dia",
+        "name": "Café de olla + churro relleno",
+        "category": "Promociones",
+        "price": 69,
+        "schedule": "08:00-12:00"
+    },
+    {
+        "id": "promo_granizados",
+        "name": "2 granizados",
+        "category": "Promociones",
+        "price": 99,
+        "schedule": "13:00-17:00"
+    },
+
+    # =====================
+    # CAFÉ
+    # =====================
+    {"id": "espresso", "name": "Espresso", "category": "Café", "price": 39},
+    {"id": "americano", "name": "Americano", "category": "Café", "price": 45},
+    {"id": "cafe_olla", "name": "Café de olla", "category": "Café", "price": 55},
+
+    {"id": "latte", "name": "Café Latte", "category": "Café", "price": 65},
+    {"id": "mocha", "name": "Mocha", "category": "Café", "price": 75},
+    {"id": "capuccino", "name": "Capuccino", "category": "Café", "price": 75},
+    {"id": "chai_latte", "name": "Chai Latte", "category": "Café", "price": 75},
+
+    {"id": "te", "name": "Té", "category": "Café", "price": 40},
+
+    # =====================
+    # BEBIDAS
+    # =====================
+    {"id": "chocolate_354", "name": "Chocolate caliente 354 ml", "category": "Bebidas", "price": 79},
+    {"id": "chocolate_473", "name": "Chocolate caliente 473 ml", "category": "Bebidas", "price": 89},
+
+    {"id": "frappe_354", "name": "Frappe / Granizado 354 ml", "category": "Bebidas Frías", "price": 79},
+    {"id": "frappe_473", "name": "Frappe / Granizado 473 ml", "category": "Bebidas Frías", "price": 89},
+
+    {"id": "malteada_354", "name": "Malteada 354 ml", "category": "Bebidas Frías", "price": 99},
+    {"id": "malteada_473", "name": "Malteada 473 ml", "category": "Bebidas Frías", "price": 115},
+
+    {"id": "refresco", "name": "Refresco 355 ml", "category": "Bebidas", "price": 45},
+    {"id": "agua", "name": "Agua natural 500 ml", "category": "Bebidas", "price": 30},
+]
+
 MENU_INDEX = {m['id']: m for m in DEFAULT_MENU}
 FRYER_BASKETS = 2
 
