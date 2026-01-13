@@ -21,7 +21,7 @@ from firebase_admin import credentials, firestore
 # =========================
 # CONFIG / BRAND
 # =========================
-APP_TITLE = "🍩 Churrería Porfirio — Recompensas & Pedidos"
+APP_TITLE = "Churrería Porfirio — Recompensas & Pedidos"
 CDMX_TZ = ZoneInfo("America/Mexico_City")
 
 # Paleta (talavera/azul) — ajustable
