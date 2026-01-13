@@ -39,112 +39,205 @@ C_BORDER = "#D7E3FF"
 st.set_page_config(page_title="Churrería Porfirio", layout="wide")
 
 # =========================
-# CSS — Talavera Blue (CORREGIDO)
+# CSS — Talavera Marino (FINAL)
 # =========================
 st.markdown(
-f"""
+"""
 <style>
-/* =========================
-   CSS - Talavera Blue (CORREGIDO)
-   - Fondo blanco real (sin gris)
-   - Cards con degradado sólido (sin transparencia)
-   ========================= */
 
-/* Fondo blanco en todo Streamlit (evita gris del tema/base) */
+/* =========================
+   PALETA MARINA (Talavera)
+   ========================= */
+:root {
+  --blue-dark: #0A2E5D;
+  --blue-main: #0F4C81;
+  --blue-mid:  #3F78B8;
+  --blue-soft: #D6E6F5;
+  --border:    #B6CCE6;
+  --text-main: #1F2937;
+  --text-muted:#6B7280;
+}
+
+/* =========================
+   FONDO GENERAL BLANCO
+   ========================= */
 .stApp,
 [data-testid="stAppViewContainer"],
 [data-testid="stHeader"],
 [data-testid="stToolbar"],
 main,
-section.main {{
+section.main {
   background: #FFFFFF !important;
-}}
+}
 
-/* Sidebar blanco (opcional) */
 section[data-testid="stSidebar"],
-section[data-testid="stSidebar"] > div {{
+section[data-testid="stSidebar"] > div {
   background: #FFFFFF !important;
-}}
+}
 
-/* Quita sombras/overlays raros del header si aplican */
-[data-testid="stHeader"] {{
+[data-testid="stHeader"] {
   box-shadow: none !important;
-}}
+}
 
-/* Layout */
-.block-container {{
-  padding-top: 1.2rem;
-  padding-bottom: 2rem;
+/* =========================
+   CONTENEDOR
+   ========================= */
+.block-container {
+  padding-top: 1.4rem;
+  padding-bottom: 2.5rem;
   max-width: 1200px;
-}}
+}
 
-/* Typography */
-h1, h2, h3, h4 {{ color: {C_TEXT}; }}
-.small-muted {{ color: {C_MUTED}; font-size: 0.92rem; }}
-.badge {{
-  display:inline-block;
-  padding: 0.15rem 0.55rem;
+/* =========================
+   TIPOGRAFÍA
+   ========================= */
+h1, h2, h3, h4 {
+  color: var(--text-main);
+}
+
+.small-muted {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+/* =========================
+   BADGES
+   ========================= */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.82rem;
-  border:1px solid {C_BORDER};
-  background:{C_BLUE_SOFT};
-  color:{C_BLUE_DARK};
-}}
+  border: 1px solid var(--border);
+  background: var(--blue-soft);
+  color: var(--blue-dark);
+}
 
-/* Cards — Degradado sólido azul -> blanco */
-.card {{
+/* =========================
+   CARDS (DEGRADADO MARINO)
+   ========================= */
+.card {
   background-color: #FFFFFF !important;
   background-image: linear-gradient(90deg,
-    {C_BLUE_SOFT} 0%,
-    #F3F7FF 45%,
+    var(--blue-main) 0%,
+    var(--blue-mid) 28%,
+    var(--blue-soft) 58%,
     #FFFFFF 100%
   ) !important;
 
-  border: 1px solid {C_BORDER} !important;
-  border-radius: 16px;
-  padding: 14px 14px;
-  box-shadow: 0 8px 22px rgba(18,58,115,0.10) !important;
-}}
+  border: 1px solid var(--border) !important;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 12px 28px rgba(10,46,93,0.20) !important;
+}
 
-.card-title {{ font-weight: 800; font-size: 1.05rem; color:{C_TEXT}; margin-bottom: 2px; }}
-.card-sub {{ color:{C_MUTED}; font-size: 0.9rem; margin-bottom: 8px; }}
-.card-price {{ font-weight: 900; color:{C_BLUE_DARK}; font-size: 1.05rem; }}
-.hr-soft {{ height:1px; background:{C_BORDER}; border:none; margin: 10px 0; }}
+.card-title {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
 
-/* Buttons */
-.stButton>button {{
-  border-radius: 12px;
-  border: 1px solid {C_BORDER};
-  padding: 0.6rem 0.9rem;
+.card-sub {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.card-price {
+  font-weight: 900;
+  color: var(--blue-dark);
+  font-size: 1.05rem;
+}
+
+.hr-soft {
+  height: 1px;
+  background: var(--border);
+  border: none;
+  margin: 12px 0;
+}
+
+/* =========================
+   BOTONES
+   ========================= */
+.stButton > button {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 0.65rem 1rem;
   font-weight: 700;
-}}
-.stButton>button:hover {{ border-color: {C_BLUE}; }}
+  background: #FFFFFF;
+  color: var(--blue-dark);
+}
 
-/* Primary buttons (wrapper .primary-btn) */
-.primary-btn .stButton>button {{
-  background:{C_BLUE};
-  color:#FFFFFF;
-  border:1px solid {C_BLUE};
-}}
-.primary-btn .stButton>button:hover {{
-  background:{C_BLUE_DARK};
-  border-color:{C_BLUE_DARK};
-}}
+.stButton > button:hover {
+  border-color: var(--blue-main);
+  color: var(--blue-main);
+}
 
-/* Inputs */
+/* Botón primario */
+.primary-btn .stButton > button {
+  background: var(--blue-main);
+  color: #FFFFFF;
+  border: 1px solid var(--blue-main);
+}
+
+.primary-btn .stButton > button:hover {
+  background: var(--blue-dark);
+  border-color: var(--blue-dark);
+}
+
+/* =========================
+   INPUTS
+   ========================= */
 .stTextInput input,
 .stNumberInput input,
-.stSelectbox select {{
-  border-radius: 12px !important;
-}}
+.stSelectbox select {
+  border-radius: 14px !important;
+}
 
-/* Segmented */
-[data-baseweb="tab-list"] button {{
-  border-radius: 12px !important;
-}}
+/* =========================
+   TABS / SEGMENTED
+   ========================= */
+[data-baseweb="tab-list"] button {
+  border-radius: 14px !important;
+}
 
-/* Hide Streamlit footer */
-footer {{ visibility: hidden; }}
+/* =========================
+   HEADER LOGO
+   ========================= */
+.header-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.2rem;
+}
+
+.header-logo img {
+  max-height: 90px;
+}
+
+/* =========================
+   FOOTER BANNER
+   ========================= */
+.footer-banner {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+}
+
+.footer-banner img {
+  max-width: 100%;
+  border-radius: 16px;
+}
+
+/* =========================
+   OCULTAR FOOTER STREAMLIT
+   ========================= */
+footer {
+  visibility: hidden;
+}
+
 </style>
 """,
 unsafe_allow_html=True,
