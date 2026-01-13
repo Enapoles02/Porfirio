@@ -43,6 +43,21 @@ st.set_page_config(page_title="Churrería Porfirio", layout="wide")
 # =========================
 st.markdown(
     f"""
+    
+/* ===== Cards (tus recuadros blancos) ===== */
+.card{
+  background: linear-gradient(90deg,
+    rgba(30,78,154,0.22) 0%,
+    rgba(30,78,154,0.12) 45%,
+    rgba(255,255,255,0.96) 100%
+  ) !important;
+
+  border: 1px solid #D7E3FF !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 22px rgba(18,58,115,0.10) !important;
+}
+
+    
 <style>
 /* Layout */
 .block-container {{ padding-top: 1.2rem; padding-bottom: 2rem; max-width: 1200px; }}
