@@ -38,77 +38,81 @@ C_BORDER = "#D7E3FF"
 
 st.set_page_config(page_title="Churrería Porfirio", layout="wide")
 
-# =========================
-# CSS — look & feel
-# =========================
-st.markdown(
-f"""
-<style>
-/* Layout */
-.block-container {{ padding-top: 1.2rem; padding-bottom: 2rem; max-width: 1200px; }}
+/* =========================
+   CSS — look & feel (CORREGIDO: ya no se verá gris)
+   ========================= */
 
+/* Fondo blanco real de toda la app (evita mezcla gris del tema Streamlit) */
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stHeader"],
+[data-testid="stToolbar"]{
+  background: #FFFFFF !important;
+}
+
+/* (opcional) sidebar también blanco */
+section[data-testid="stSidebar"]{
+  background: #FFFFFF !important;
+}
+
+/* Layout */
+.block-container { padding-top: 1.2rem; padding-bottom: 2rem; max-width: 1200px; }
 
 /* Typography */
-h1, h2, h3, h4 {{ color: {C_TEXT}; }}
-.small-muted {{ color: {C_MUTED}; font-size: 0.92rem; }}
-.badge {{ display:inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.82rem; border:1px solid {C_BORDER}; background:{C_BLUE_SOFT}; color:{C_BLUE_DARK}; }}
+h1, h2, h3, h4 { color: #0F172A; }
+.small-muted { color: #64748B; font-size: 0.92rem; }
+.badge{
+  display:inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+  font-size: 0.82rem; border:1px solid #D7E3FF;
+  background:#EAF1FF; color:#123A73;
+}
 
+/* Cards — degradado SOLIDO azul->blanco (sin transparencia, no se ensucia) */
+.card{
+  background-color: #FFFFFF !important;
+  background-image: linear-gradient(90deg,
+    #EAF1FF 0%,
+    #F3F7FF 45%,
+    #FFFFFF 100%
+  ) !important;
 
-/* Cards — ACTUALIZADO: degradado azul -> blanco hacia la derecha */
-.card {{
-background: linear-gradient(90deg,
-rgba(30,78,154,0.22) 0%,
-rgba(30,78,154,0.12) 45%,
-rgba(255,255,255,0.96) 100%
-) !important;
-border: 1px solid {C_BORDER} !important;
-border-radius: 16px;
-padding: 14px 14px;
-box-shadow: 0 8px 22px rgba(18,58,115,0.10) !important;
-}}
-.card-title {{ font-weight: 800; font-size: 1.05rem; color:{C_TEXT}; margin-bottom: 2px; }}
-.card-sub {{ color:{C_MUTED}; font-size: 0.9rem; margin-bottom: 8px; }}
-.card-price {{ font-weight: 900; color:{C_BLUE_DARK}; font-size: 1.05rem; }}
-.hr-soft {{ height:1px; background:{C_BORDER}; border:none; margin: 10px 0; }}
+  border: 1px solid #D7E3FF !important;
+  border-radius: 16px;
+  padding: 14px 14px;
+  box-shadow: 0 8px 22px rgba(18,58,115,0.10) !important;
+}
 
+.card-title { font-weight: 800; font-size: 1.05rem; color:#0F172A; margin-bottom: 2px; }
+.card-sub { color:#64748B; font-size: 0.9rem; margin-bottom: 8px; }
+.card-price { font-weight: 900; color:#123A73; font-size: 1.05rem; }
+.hr-soft { height:1px; background:#D7E3FF; border:none; margin: 10px 0; }
 
 /* Buttons */
-.stButton>button {{
-border-radius: 12px;
-border: 1px solid {C_BORDER};
-padding: 0.6rem 0.9rem;
-font-weight: 700;
-}}
-.stButton>button:hover {{ border-color: {C_BLUE}; }}
+.stButton>button{
+  border-radius: 12px;
+  border: 1px solid #D7E3FF;
+  padding: 0.6rem 0.9rem;
+  font-weight: 700;
+}
+.stButton>button:hover{ border-color: #1E4E9A; }
 
-
-/* Primary buttons (we fake it with a class wrapper) */
-.primary-btn .stButton>button {{
-background: {C_BLUE};
-color: white;
-border: 1px solid {C_BLUE};
-}}
-.primary-btn .stButton>button:hover {{ background:{C_BLUE_DARK}; border-color:{C_BLUE_DARK}; }}
-
+/* Primary buttons (fake class wrapper) */
+.primary-btn .stButton>button{
+  background: #1E4E9A;
+  color: white;
+  border: 1px solid #1E4E9A;
+}
+.primary-btn .stButton>button:hover{ background:#123A73; border-color:#123A73; }
 
 /* Inputs */
-.stTextInput input, .stNumberInput input, .stSelectbox select {{ border-radius: 12px !important; }}
-
+.stTextInput input, .stNumberInput input, .stSelectbox select { border-radius: 12px !important; }
 
 /* Segmented */
-[data-baseweb="tab-list"] button {{
-border-radius: 12px !important;
-}}
-
+[data-baseweb="tab-list"] button{ border-radius: 12px !important; }
 
 /* Hide Streamlit footer */
-footer {{visibility: hidden;}}
+footer { visibility: hidden; }
 
-
-</style>
-""",
-unsafe_allow_html=True,
-)
 # =========================
 # HELPERS
 # =========================
