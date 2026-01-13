@@ -39,35 +39,53 @@ C_BORDER = "#D7E3FF"
 st.set_page_config(page_title="Churrería Porfirio", layout="wide")
 
 /* =========================
-   CSS — look & feel (CORREGIDO: ya no se verá gris)
+   CSS — Talavera Blue (CORREGIDO)
+   - Fondo blanco real (sin gris)
+   - Cards con degradado sólido (sin transparencia)
    ========================= */
 
-/* Fondo blanco real de toda la app (evita mezcla gris del tema Streamlit) */
+/* Fondo blanco en todo Streamlit (evita gris del tema/base) */
 .stApp,
 [data-testid="stAppViewContainer"],
 [data-testid="stHeader"],
-[data-testid="stToolbar"]{
+[data-testid="stToolbar"],
+main,
+section.main {
   background: #FFFFFF !important;
 }
 
-/* (opcional) sidebar también blanco */
-section[data-testid="stSidebar"]{
+/* Sidebar blanco (opcional) */
+section[data-testid="stSidebar"],
+section[data-testid="stSidebar"] > div {
   background: #FFFFFF !important;
+}
+
+/* Quita sombras/overlays raros del header si aplican */
+[data-testid="stHeader"] {
+  box-shadow: none !important;
 }
 
 /* Layout */
-.block-container { padding-top: 1.2rem; padding-bottom: 2rem; max-width: 1200px; }
+.block-container {
+  padding-top: 1.2rem;
+  padding-bottom: 2rem;
+  max-width: 1200px;
+}
 
 /* Typography */
 h1, h2, h3, h4 { color: #0F172A; }
 .small-muted { color: #64748B; font-size: 0.92rem; }
 .badge{
-  display:inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
-  font-size: 0.82rem; border:1px solid #D7E3FF;
-  background:#EAF1FF; color:#123A73;
+  display:inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  border:1px solid #D7E3FF;
+  background:#EAF1FF;
+  color:#123A73;
 }
 
-/* Cards — degradado SOLIDO azul->blanco (sin transparencia, no se ensucia) */
+/* Cards — Degradado sólido azul -> blanco (SIN alpha / SIN rgba) */
 .card{
   background-color: #FFFFFF !important;
   background-image: linear-gradient(90deg,
@@ -94,24 +112,34 @@ h1, h2, h3, h4 { color: #0F172A; }
   padding: 0.6rem 0.9rem;
   font-weight: 700;
 }
-.stButton>button:hover{ border-color: #1E4E9A; }
+.stButton>button:hover{ border-color:#1E4E9A; }
 
-/* Primary buttons (fake class wrapper) */
+/* Primary buttons (wrapper .primary-btn) */
 .primary-btn .stButton>button{
-  background: #1E4E9A;
-  color: white;
-  border: 1px solid #1E4E9A;
+  background:#1E4E9A;
+  color:#FFFFFF;
+  border:1px solid #1E4E9A;
 }
-.primary-btn .stButton>button:hover{ background:#123A73; border-color:#123A73; }
+.primary-btn .stButton>button:hover{
+  background:#123A73;
+  border-color:#123A73;
+}
 
 /* Inputs */
-.stTextInput input, .stNumberInput input, .stSelectbox select { border-radius: 12px !important; }
+.stTextInput input,
+.stNumberInput input,
+.stSelectbox select{
+  border-radius: 12px !important;
+}
 
 /* Segmented */
-[data-baseweb="tab-list"] button{ border-radius: 12px !important; }
+[data-baseweb="tab-list"] button{
+  border-radius: 12px !important;
+}
 
 /* Hide Streamlit footer */
 footer { visibility: hidden; }
+
 
 # =========================
 # HELPERS
