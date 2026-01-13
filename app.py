@@ -21,6 +21,17 @@ from firebase_admin import credentials, firestore
 # =========================
 # CONFIG / BRAND
 # =========================
+
+st.markdown(
+"""
+<div class="header-logo">
+  <img src="https://TU_URL_DEL_LOGO.png">
+</div>
+""",
+unsafe_allow_html=True,
+)
+
+
 APP_TITLE = "Churrería Porfirio — Recompensas & Pedidos"
 CDMX_TZ = ZoneInfo("America/Mexico_City")
 
@@ -130,6 +141,8 @@ h1, h2, h3, h4 {
   padding: 16px;
   box-shadow: 0 12px 28px rgba(10,46,93,0.20) !important;
 }
+
+
 
 .card-title {
   font-weight: 800;
