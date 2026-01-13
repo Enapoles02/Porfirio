@@ -25,7 +25,7 @@ from firebase_admin import credentials, firestore
 st.markdown(
 """
 <div class="header-logo">
-  <img src="https://TU_URL_DEL_LOGO.png">
+  <img src="https://scontent.fmex39-1.fna.fbcdn.net/v/t39.30808-6/434309611_122124689540226950_3619993036029337305_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=DFrRuyRGHJoQ7kNvwGk7GNj&_nc_oc=AdlF8HAm-Peccurb0K8Ev5LF1JLiBzmacY4faLMTXzcyVFxvl89IyNcCl8PM8H7YFQbQzayyRe3eHdL1siDe4Qj4&_nc_zt=23&_nc_ht=scontent.fmex39-1.fna&_nc_gid=bj1B_NgkRAKk9neZF4t1NQ&oh=00_AfpzDbCvoqLoMjaNclrfcoEqJZEOInuHFCCzQCHSCZuMDA&oe=696C8AF9">
 </div>
 """,
 unsafe_allow_html=True,
