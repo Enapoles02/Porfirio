@@ -38,12 +38,6 @@ C_BORDER = "#D7E3FF"
 
 st.set_page_config(page_title="Churrería Porfirio", layout="wide")
 
-  =========================
-  CSS — Talavera Blue (CORREGIDO)
-  - Fondo blanco real (sin gris)
-  - Cards con degradado sólido (sin transparencia)
-  ========================= */
-
 /* Fondo blanco en todo Streamlit (evita gris del tema/base) */
 .stApp,
 [data-testid="stAppViewContainer"],
