@@ -1329,12 +1329,7 @@ def page_admin():
         st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    st.success(f"Acceso autorizado — Rol: {role}")
-    ss["admin_role"] = role
-    ss["admin_email"] = (admin_email or "").strip().lower()
-    st.markdown("</div>", unsafe_allow_html=True)
-    return
-
+    
     st.success(f"Acceso autorizado — Rol: {role}")
     ss["admin_role"] = role
     ss["admin_email"] = (admin_email or "").strip().lower()
