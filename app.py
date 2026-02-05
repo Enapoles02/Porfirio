@@ -845,14 +845,207 @@ def nav_bar():
 
 
 # =========================
-# ADMIN AUTH
+# ADMIN AUTH (ADMIN vs SUPER_ADMIN)
+# =========================
+# secrets.toml recomendado:
+# admin_credentials = { email="...", password="..." }
+# super_admin_credentials = { email="...", password="..." }
+#
+# (Opcional)
+# raffle_id = "RIFA_2026"
+
+def admin_role(email: str, password: str) -> Optional[str]:
+    email = (email or "").strip().lower()
+    password = password or ""
+
+    admin_data = st.secrets.get("admin_credentials") or {}
+    super_data = st.secrets.get("super_admin_credentials") or {}
+
+    if email and password and email == (super_data.get("email") or "").strip().lower() and password == (super_data.get("password") or ""):
+        return "SUPER_ADMIN"
+
+    if email and password and email == (admin_data.get("email") or "").strip().lower() and password == (admin_data.get("password") or ""):
+        return "ADMIN"
+
+    return None
+
+
+# =========================
+# ADMIN FEATURES — RIFA / CIERRE / UTILIDAD
 # =========================
 
-def is_admin_ok(email: str, password: str) -> bool:
-    admin_data = st.secrets.get("admin_credentials")
-    if not admin_data:
-        return False
-    return email == admin_data.get("email") and password == admin_data.get("password")
+DEFAULT_FIXED_COSTS = {
+    "Nomina": 10100.00,
+    "Renta": 8750.00,
+    "Luz": 937.50,
+    "Agua": 300.00,
+    "Regalias": 3770.00,
+}
+
+DEFAULT_VARIABLE_COSTS = {
+    "SAMS/SUPER": 4086.92,
+    "Insumos Porf": 0.00,
+    "Mercado": 320.00,
+    "Molino": 100.00,
+    "Gas": 712.00,
+}
+
+DENOMS = [20, 50, 100, 200, 500]
+
+
+def _raffle_id() -> str:
+    return (st.secrets.get("raffle_id") or "RIFA_2026").strip()
+
+
+def raffle_assign_ticket(customer_id_or_email: str, sale_ticket: str, boleto_num: int, assigned_by: str) -> Tuple[bool, str]:
+    # validar cliente registrado
+    u = get_user((customer_id_or_email or "").strip())
+    if not u:
+        return False, "❌ Cliente NO encontrado (debe estar registrado)."
+
+    customer_id = u.get("cliente_id") or ""
+    if not customer_id:
+        return False, "❌ Cliente sin número de cliente asignado."
+
+    sale_ticket = (sale_ticket or "").strip()
+    if not sale_ticket:
+        return False, "❌ Falta número de ticket."
+
+    try:
+        boleto_num = int(boleto_num)
+    except Exception:
+        return False, "❌ Número de boleto inválido."
+
+    raffle_id = _raffle_id()
+    doc_id = f"{raffle_id}_{boleto_num}"
+    ref = db.collection("raffle_tickets").document(doc_id)
+
+    # si ya existe, no dejar
+    snap = ref.get()
+    if snap.exists:
+        d = snap.to_dict() or {}
+        return False, f"❌ Ese boleto ya está asignado (Cliente: {d.get('customer_id','')}, Ticket: {d.get('sale_ticket','')})."
+
+    # (Opcional) evitar ticket duplicado
+    # Si quieres permitir varios boletos por ticket, comenta este bloque.
+    dup = list(
+        db.collection("raffle_tickets")
+          .where("raffle_id", "==", raffle_id)
+          .where("sale_ticket", "==", sale_ticket)
+          .limit(1)
+          .stream()
+    )
+    if dup:
+        return False, "❌ Ese número de ticket ya fue usado para un boleto. (Evita duplicados)"
+
+    ref.set({
+        "raffle_id": raffle_id,
+        "boleto_num": int(boleto_num),
+        "customer_id": customer_id,
+        "customer_email": u.get("email", ""),
+        "sale_ticket": sale_ticket,
+        "assigned_by": assigned_by,
+        "assigned_at": now_cdmx().isoformat(),
+    })
+    return True, f"✅ Boleto {boleto_num} asignado a {customer_id}."
+
+
+def calc_cash_total(n20: int, n50: int, n100: int, n200: int, n500: int) -> float:
+    return float(20*n20 + 50*n50 + 100*n100 + 200*n200 + 500*n500)
+
+
+def save_cash_closing(date_iso: str, shift: str, bills: Dict[str, int], card_total: float, created_by: str) -> Tuple[bool, str]:
+    # shift: "MAT" | "VES"
+    doc_id = f"{date_iso}_{shift}"
+    ref = db.collection("cash_closings").document(doc_id)
+    if ref.get().exists:
+        return False, "❌ Ya existe un cierre para esa fecha/turno."
+
+    n20 = int(bills.get("20", 0))
+    n50 = int(bills.get("50", 0))
+    n100 = int(bills.get("100", 0))
+    n200 = int(bills.get("200", 0))
+    n500 = int(bills.get("500", 0))
+
+    cash_total = calc_cash_total(n20, n50, n100, n200, n500)
+    card_total = float(card_total or 0)
+    sales_total = float(cash_total + card_total)
+
+    ref.set({
+        "date": date_iso,
+        "shift": shift,
+        "bills": {"20": n20, "50": n50, "100": n100, "200": n200, "500": n500},
+        "cash_total": cash_total,
+        "card_total": card_total,
+        "sales_total": sales_total,
+        "created_by": created_by,
+        "created_at": now_cdmx().isoformat(),
+    })
+    return True, f"✅ Cierre guardado: {date_iso} {shift} — Cash {money(cash_total)} | Tarjetas {money(card_total)} | Total {money(sales_total)}"
+
+
+def fetch_closings_range(start_iso: str, end_iso: str) -> List[Dict[str, Any]]:
+    # Intento con query (puede pedir índice)
+    try:
+        q = (db.collection("cash_closings")
+             .where("date", ">=", start_iso)
+             .where("date", "<=", end_iso)
+             .stream())
+        out = []
+        for d in q:
+            row = d.to_dict() or {}
+            row["_id"] = d.id
+            out.append(row)
+        return out
+    except Exception:
+        # fallback: stream y filtrar
+        out = []
+        for d in db.collection("cash_closings").stream():
+            row = d.to_dict() or {}
+            date_iso = row.get("date", "")
+            if start_iso <= date_iso <= end_iso:
+                row["_id"] = d.id
+                out.append(row)
+        return out
+
+
+def save_profit_consolidation(start_iso: str, end_iso: str, totals: Dict[str, float], fixed_costs: Dict[str, float], variable_costs: Dict[str, float], created_by: str) -> Tuple[bool, str]:
+    doc_id = f"{start_iso}_{end_iso}"
+    ref = db.collection("profit_consolidations").document(doc_id)
+
+    total_costs = float(sum(fixed_costs.values()) + sum(variable_costs.values()))
+    profit = float(totals.get("sales_total", 0) - total_costs)
+
+    cash_total = float(totals.get("cash_total", 0))
+    # cash a regresar = cash - utilidad (si utilidad positiva)
+    if profit <= 0:
+        cash_to_return = cash_total
+    else:
+        cash_to_return = max(0.0, cash_total - profit)
+
+    ref.set({
+        "period_start": start_iso,
+        "period_end": end_iso,
+        "totals": totals,
+        "fixed_costs": fixed_costs,
+        "variable_costs": variable_costs,
+        "total_costs": total_costs,
+        "profit": profit,
+        "cash_to_return": cash_to_return,
+        "created_by": created_by,
+        "created_at": now_cdmx().isoformat(),
+    })
+
+    msg = (
+        f"📌 Consolidación {start_iso} → {end_iso}\n"
+        f"- Ventas: {money(totals.get('sales_total',0))}\n"
+        f"- Costos: {money(total_costs)}\n"
+        f"- Utilidad: {money(profit)}\n"
+        f"- Cash a regresar a la churrería: {money(cash_to_return)}"
+    )
+    return True, msg
+
+
 
 
 # =========================
@@ -1129,10 +1322,18 @@ def page_admin():
     admin_email = st.text_input("Correo de Admin", key="ad_email")
     admin_pass = st.text_input("Contraseña Admin", type="password", key="ad_pwd")
 
-    if not is_admin_ok(admin_email, admin_pass):
+    role = admin_role(admin_email, admin_pass)
+    if not role:
         st.error("Acceso denegado.")
-        st.caption("Configura admin_credentials en secrets (email/password).")
+        st.caption("Configura admin_credentials y/o super_admin_credentials en secrets (email/password).")
         st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    st.success(f"Acceso autorizado — Rol: {role}")
+    ss["admin_role"] = role
+    ss["admin_email"] = (admin_email or "").strip().lower()
+    st.markdown("</div>", unsafe_allow_html=True)
+
         return
 
     st.success("Acceso autorizado")
@@ -1243,6 +1444,181 @@ def page_admin():
                     st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+    # =========================
+    # 🎟️ RIFA — Asignar boletos (ADMIN + SUPER_ADMIN)
+    # =========================
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-title'>🎟️ Rifa — Asignar boleto</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-sub'>El cliente elige su número. Si ya existe, no se puede asignar.</div>", unsafe_allow_html=True)
+
+    raffle_customer = st.text_input("Número de cliente o correo del cliente", key="raffle_customer")
+    raffle_sale_ticket = st.text_input("Número de ticket (folio de compra)", key="raffle_sale_ticket")
+    raffle_boleto = st.number_input("Número de boleto", min_value=1, step=1, value=1, key="raffle_boleto")
+
+    st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
+    do_raffle = st.button("Asignar boleto", key="btn_assign_raffle")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if do_raffle:
+        ok, msg = raffle_assign_ticket(
+            customer_id_or_email=raffle_customer,
+            sale_ticket=raffle_sale_ticket,
+            boleto_num=int(raffle_boleto),
+            assigned_by=ss.get("admin_email", ""),
+        )
+        if ok:
+            st.success(msg)
+            log_action(db, "raffle_assign", ss.get("admin_email", ""), msg)
+        else:
+            st.error(msg)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # =========================
+    # 💵 CIERRE — Caja (ADMIN + SUPER_ADMIN)
+    # =========================
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card-title'>💵 Cierre de caja</div>", unsafe_allow_html=True)
+    st.markdown("<div class='card-sub'>Solo registra Cash + Tarjetas por turno (Matutino/Vespertino).</div>", unsafe_allow_html=True)
+
+    today = now_cdmx().date()
+    c1, c2, c3 = st.columns([2, 2, 2])
+    with c1:
+        close_date = st.date_input("Fecha", value=today, key="close_date")
+    with c2:
+        shift_label = st.selectbox("Turno", options=["Matutino", "Vespertino"], key="close_shift")
+        shift = "MAT" if shift_label == "Matutino" else "VES"
+    with c3:
+        card_total = st.number_input("Tarjetas ($MXN)", min_value=0.0, step=10.0, value=0.0, key="close_cards")
+
+    st.markdown("**Cash (número de billetes)**")
+    b1, b2, b3, b4, b5 = st.columns(5)
+    with b1:
+        n20 = st.number_input("$20", min_value=0, step=1, value=0, key="b20")
+    with b2:
+        n50 = st.number_input("$50", min_value=0, step=1, value=0, key="b50")
+    with b3:
+        n100 = st.number_input("$100", min_value=0, step=1, value=0, key="b100")
+    with b4:
+        n200 = st.number_input("$200", min_value=0, step=1, value=0, key="b200")
+    with b5:
+        n500 = st.number_input("$500", min_value=0, step=1, value=0, key="b500")
+
+    cash_total_preview = calc_cash_total(int(n20), int(n50), int(n100), int(n200), int(n500))
+    st.info(f"Cash total: **{money(cash_total_preview)}** — Ventas estimadas: **{money(cash_total_preview + float(card_total or 0))}**")
+
+    st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
+    do_close = st.button("Guardar cierre", key="btn_save_closing")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if do_close:
+        date_iso = close_date.isoformat()
+        bills = {"20": int(n20), "50": int(n50), "100": int(n100), "200": int(n200), "500": int(n500)}
+        ok, msg = save_cash_closing(
+            date_iso=date_iso,
+            shift=shift,
+            bills=bills,
+            card_total=float(card_total or 0),
+            created_by=ss.get("admin_email", ""),
+        )
+        if ok:
+            st.success(msg)
+            log_action(db, "cash_closing", ss.get("admin_email", ""), msg)
+        else:
+            st.error(msg)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # =========================
+    # 📈 UTILIDAD — Consolidar (SOLO SUPER_ADMIN)
+    # =========================
+    if ss.get("admin_role") == "SUPER_ADMIN":
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<div class='card-title'>📈 Utilidad — Consolidar (Super Admin)</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card-sub'>Usa los cierres (cash/tarjeta) y calcula utilidad. Costos variables se ajustan aquí.</div>", unsafe_allow_html=True)
+
+        colA, colB = st.columns(2)
+        with colA:
+            start_d = st.date_input("Inicio (YYYY-MM-DD)", value=today, key="profit_start")
+        with colB:
+            end_d = st.date_input("Fin (YYYY-MM-DD)", value=today, key="profit_end")
+
+        start_iso = start_d.isoformat()
+        end_iso = end_d.isoformat()
+
+        closings = fetch_closings_range(start_iso, end_iso)
+        total_cash = float(sum(float(x.get("cash_total", 0) or 0) for x in closings))
+        total_cards = float(sum(float(x.get("card_total", 0) or 0) for x in closings))
+        total_sales = float(sum(float(x.get("sales_total", 0) or 0) for x in closings))
+
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Cash (rango)", money(total_cash))
+        k2.metric("Tarjetas (rango)", money(total_cards))
+        k3.metric("Ventas totales (rango)", money(total_sales))
+
+        st.markdown("### Costos fijos (no editables)")
+        st.write({k: money(v) for k, v in DEFAULT_FIXED_COSTS.items()})
+
+        st.markdown("### Costos variables (editable, prellenado con defaults)")
+        v1, v2, v3, v4, v5 = st.columns(5)
+        with v1:
+            c_sams = st.number_input("SAMS/SUPER", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["SAMS/SUPER"]), key="c_sams")
+        with v2:
+            c_ins = st.number_input("Insumos Porf", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["Insumos Porf"]), key="c_ins")
+        with v3:
+            c_mer = st.number_input("Mercado", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["Mercado"]), key="c_mer")
+        with v4:
+            c_mol = st.number_input("Molino", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["Molino"]), key="c_mol")
+        with v5:
+            c_gas = st.number_input("Gas", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["Gas"]), key="c_gas")
+
+        variable_costs = {
+            "SAMS/SUPER": float(c_sams or 0),
+            "Insumos Porf": float(c_ins or 0),
+            "Mercado": float(c_mer or 0),
+            "Molino": float(c_mol or 0),
+            "Gas": float(c_gas or 0),
+        }
+
+        fixed_costs = {k: float(v) for k, v in DEFAULT_FIXED_COSTS.items()}
+        total_costs_preview = float(sum(fixed_costs.values()) + sum(variable_costs.values()))
+        profit_preview = float(total_sales - total_costs_preview)
+
+        if profit_preview <= 0:
+            cash_to_return_preview = total_cash
+        else:
+            cash_to_return_preview = max(0.0, total_cash - profit_preview)
+
+        st.markdown("<hr class='hr-soft' />", unsafe_allow_html=True)
+        st.markdown(f"**Costos totales:** {money(total_costs_preview)}")
+        st.markdown(f"**Utilidad:** {money(profit_preview)}")
+        st.markdown(f"**Cash a regresar a la churrería:** {money(cash_to_return_preview)}")
+
+        st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
+        do_profit = st.button("Consolidar y guardar utilidad", key="btn_profit_save")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        if do_profit:
+            totals = {"cash_total": total_cash, "card_total": total_cards, "sales_total": total_sales}
+            ok, msg = save_profit_consolidation(
+                start_iso=start_iso,
+                end_iso=end_iso,
+                totals=totals,
+                fixed_costs=fixed_costs,
+                variable_costs=variable_costs,
+                created_by=ss.get("admin_email", ""),
+            )
+            if ok:
+                st.success("✅ Consolidación guardada")
+                st.code(msg)
+                log_action(db, "profit_consolidation", ss.get("admin_email", ""), msg)
+            else:
+                st.error(msg)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("ℹ️ Utilidad y consolidación: solo visible para SUPER_ADMIN.")
 
 
 # =========================
