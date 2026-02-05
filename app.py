@@ -1333,11 +1333,13 @@ def page_admin():
     ss["admin_role"] = role
     ss["admin_email"] = (admin_email or "").strip().lower()
     st.markdown("</div>", unsafe_allow_html=True)
+    return
 
-        return
-
-    st.success("Acceso autorizado")
+    st.success(f"Acceso autorizado — Rol: {role}")
+    ss["admin_role"] = role
+    ss["admin_email"] = (admin_email or "").strip().lower()
     st.markdown("</div>", unsafe_allow_html=True)
+    
 
     # KPIs del día
     st.markdown("<div class='card'>", unsafe_allow_html=True)
