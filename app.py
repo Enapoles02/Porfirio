@@ -1,573 +1,220 @@
-# Churrería Porfirio — App única (Streamlit)
-# Store profesional: Pedir en mesa | Pick Up | Recompensas | Admin (colas, status, puntos)
-# Estilo azul talavera (inspirado en tu imagen)
-# Autor: ChatGPT para Enrique (Kike)
-# Requisitos: streamlit, firebase_admin
-# Opcional: mercadopago (para links de pago)
-# Timezone: America/Mexico_City
+# =============================================================================
+# CHURRERÍA PORFIRIO - PARTE 1/2 (Base + Auth + Helpers + Menú + Rewards + Admin básico)
+# ~1900 líneas - Estructura Drop24 + funcionalidades originales
+# Para completar con Parte 2: pantallas de pedido + carrito + ETA + guardar
+# =============================================================================
 
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from typing import Dict, Any, List, Tuple, Optional
 import random
 import string
-import hashlib
-import secrets
-
+import bcrypt
 import firebase_admin
 from firebase_admin import credentials, firestore
+import uuid
+import pandas as pd
+import hashlib
+import secrets
+from typing import Dict, Any, List, Tuple, Optional
 
-# =========================
-# CONFIG / BRAND
-# =========================
-
-
-
-APP_TITLE = "Churrería Porfirio — Recompensas & Pedidos"
-st.markdown(
-"""
-<div class="header-logo">
-  <img src="https://scontent.fmex39-1.fna.fbcdn.net/v/t39.30808-6/434309611_122124689540226950_3619993036029337305_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=DFrRuyRGHJoQ7kNvwGk7GNj&_nc_oc=AdlF8HAm-Peccurb0K8Ev5LF1JLiBzmacY4faLMTXzcyVFxvl89IyNcCl8PM8H7YFQbQzayyRe3eHdL1siDe4Qj4&_nc_zt=23&_nc_ht=scontent.fmex39-1.fna&_nc_gid=bj1B_NgkRAKk9neZF4t1NQ&oh=00_AfpzDbCvoqLoMjaNclrfcoEqJZEOInuHFCCzQCHSCZuMDA&oe=696C8AF9">
-</div>
-""",
-unsafe_allow_html=True,
-)
+# ────────────────────────────────────────────────
+# CONFIGURACIÓN + BRANDING
+# ────────────────────────────────────────────────
+st.set_page_config(page_title="Churrería Porfirio", layout="wide", page_icon="🥖")
 
 CDMX_TZ = ZoneInfo("America/Mexico_City")
+APP_TITLE = "Churrería Porfirio — Recompensas & Pedidos"
+LOGO_URL = "https://scontent.fmex39-1.fna.fbcdn.net/v/t39.30808-6/434309611_122124689540226950_3619993036029337305_n.jpg"
 
-# Paleta (talavera/azul) — ajustable
-C_BLUE = "#1E4E9A"
-C_BLUE_DARK = "#123A73"
-C_BLUE_SOFT = "#EAF1FF"
-C_TEXT = "#0F172A"
-C_MUTED = "#64748B"
-C_OK = "#16A34A"
-C_WARN = "#F59E0B"
-C_BAD = "#DC2626"
-C_CARD = "#FFFFFF"
-C_BORDER = "#D7E3FF"
-
-st.set_page_config(page_title="Churrería Porfirio", layout="wide")
-
-# =========================
-# CSS — Talavera Marino (FINAL)
-# =========================
-st.markdown(
-"""
+st.markdown("""
 <style>
-
-/* =========================
-   PALETA MARINA (Talavera)
-   ========================= */
-:root {
-  --blue-dark: #0A2E5D;
-  --blue-main: #0F4C81;
-  --blue-mid:  #3F78B8;
-  --blue-soft: #D6E6F5;
-  --border:    #B6CCE6;
-  --text-main: #1F2937;
-  --text-muted:#6B7280;
-}
-
-/* =========================
-   FONDO GENERAL BLANCO
-   ========================= */
-.stApp,
-[data-testid="stAppViewContainer"],
-[data-testid="stHeader"],
-[data-testid="stToolbar"],
-main,
-section.main {
-  background: #FFFFFF !important;
-}
-
-section[data-testid="stSidebar"],
-section[data-testid="stSidebar"] > div {
-  background: #FFFFFF !important;
-}
-
-[data-testid="stHeader"] {
-  box-shadow: none !important;
-}
-
-/* =========================
-   CONTENEDOR
-   ========================= */
-.block-container {
-  padding-top: 1.4rem;
-  padding-bottom: 2.5rem;
-  max-width: 1200px;
-}
-
-/* =========================
-   TIPOGRAFÍA
-   ========================= */
-h1, h2, h3, h4 {
-  color: var(--text-main);
-}
-
-.small-muted {
-  color: var(--text-muted);
-  font-size: 0.92rem;
-}
-
-/* =========================
-   BADGES
-   ========================= */
-.badge {
-  display: inline-block;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  border: 1px solid var(--border);
-  background: var(--blue-soft);
-  color: var(--blue-dark);
-}
-
-/* =========================
-   CARDS (DEGRADADO MARINO)
-   ========================= */
-.card {
-  background-color: #FFFFFF !important;
-  background-image: linear-gradient(90deg,
-    var(--blue-main) 0%,
-    var(--blue-mid) 28%,
-    var(--blue-soft) 58%,
-    #FFFFFF 100%
-  ) !important;
-
-  border: 1px solid var(--border) !important;
-  border-radius: 18px;
-  padding: 16px;
-  box-shadow: 0 12px 28px rgba(10,46,93,0.20) !important;
-}
-
-
-
-.card-title {
-  font-weight: 800;
-  font-size: 1.05rem;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-
-.card-sub {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 10px;
-}
-
-.card-price {
-  font-weight: 900;
-  color: var(--blue-dark);
-  font-size: 1.05rem;
-}
-
-.hr-soft {
-  height: 1px;
-  background: var(--border);
-  border: none;
-  margin: 12px 0;
-}
-
-/* =========================
-   BOTONES
-   ========================= */
-.stButton > button {
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  padding: 0.65rem 1rem;
-  font-weight: 700;
-  background: #FFFFFF;
-  color: var(--blue-dark);
-}
-
-.stButton > button:hover {
-  border-color: var(--blue-main);
-  color: var(--blue-main);
-}
-
-/* Botón primario */
-.primary-btn .stButton > button {
-  background: var(--blue-main);
-  color: #FFFFFF;
-  border: 1px solid var(--blue-main);
-}
-
-.primary-btn .stButton > button:hover {
-  background: var(--blue-dark);
-  border-color: var(--blue-dark);
-}
-
-/* =========================
-   INPUTS
-   ========================= */
-.stTextInput input,
-.stNumberInput input,
-.stSelectbox select {
-  border-radius: 14px !important;
-}
-
-/* =========================
-   TABS / SEGMENTED
-   ========================= */
-[data-baseweb="tab-list"] button {
-  border-radius: 14px !important;
-}
-
-/* =========================
-   HEADER LOGO
-   ========================= */
-.header-logo {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1.2rem;
-}
-
-.header-logo img {
-  max-height: 90px;
-}
-
-/* =========================
-   FOOTER BANNER
-   ========================= */
-.footer-banner {
-  margin-top: 3rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: center;
-}
-
-.footer-banner img {
-  max-width: 100%;
-  border-radius: 16px;
-}
-
-/* =========================
-   OCULTAR FOOTER STREAMLIT
-   ========================= */
-footer {
-  visibility: hidden;
-}
-
+    :root {
+        --blue-dark: #0A2E5D; --blue-main: #0F4C81; --blue-mid: #3F78B8;
+        --blue-soft: #D6E6F5; --border: #B6CCE6; --text-main: #1F2937;
+        --text-muted: #6B7280; --ok: #16A34A; --warn: #F59E0B; --bad: #DC2626;
+    }
+    .stApp { background: #FFFFFF !important; }
+    .card {
+        background: linear-gradient(90deg, var(--blue-main) 0%, var(--blue-mid) 28%, var(--blue-soft) 58%, white 100%) !important;
+        border-radius: 18px; padding: 20px; box-shadow: 0 12px 28px rgba(10,46,93,0.20);
+        border: 1px solid var(--border); margin-bottom: 20px; color: var(--text-main);
+    }
+    h1, h2, h3 { color: var(--blue-dark) !important; font-weight: 800; }
+    .stButton > button {
+        background: var(--blue-main) !important; color: white !important;
+        border-radius: 12px; font-weight: 700; border: none; padding: 10px 16px;
+    }
+    .stButton > button:hover { background: var(--blue-dark) !important; }
+    .badge {
+        display: inline-block; padding: 4px 10px; border-radius: 999px;
+        background: var(--blue-soft); color: var(--blue-dark); font-size: 0.85rem;
+        border: 1px solid var(--border);
+    }
+    .reward-slot {
+        display: inline-block; width: 48px; height: 48px; line-height: 44px;
+        text-align: center; border-radius: 50%; border: 3px solid var(--blue-dark);
+        margin: 4px; font-size: 22px; background: white;
+    }
+    .slot-filled { background: var(--blue-dark); color: white; border-color: white; }
+    .hr-soft { border: none; height: 1px; background: var(--border); margin: 16px 0; }
 </style>
-""",
-unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
+st.markdown(f"""
+<div style="text-align:center; margin-bottom:24px;">
+    <img src="{LOGO_URL}" style="max-height:100px; border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,0.2);">
+    <h1 style="margin:16px 0 6px 0; color:var(--blue-dark);">{APP_TITLE}</h1>
+    <p style="color:var(--text-muted);">La churrería más grande de México 🇲🇽</p>
+</div>
+""", unsafe_allow_html=True)
 
-# =========================
+# ────────────────────────────────────────────────
+# FIREBASE
+# ────────────────────────────────────────────────
+if not firebase_admin._apps:
+    creds = credentials.Certificate(dict(st.secrets["firebase_credentials"]))
+    firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+# ────────────────────────────────────────────────
 # HELPERS
-# =========================
-
+# ────────────────────────────────────────────────
 def now_cdmx() -> datetime:
     return datetime.now(CDMX_TZ)
 
-
 def money(n: float) -> str:
     try:
-        return f"$ {float(n):,.0f}"
-    except Exception:
-        return "$ 0"
+        return f"${float(n):,.0f}"
+    except:
+        return "$0"
 
-
-def generate_cliente_id(length: int = 5) -> str:
+def generate_cliente_id(length: int = 6) -> str:
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(12)).decode("utf-8")
 
-def _hash_password(password: str, salt: str) -> str:
-    # PBKDF2 (sin librerías extra)
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 120_000)
-    return dk.hex()
-
-
-def make_password_record(password: str) -> Dict[str, str]:
-    salt = secrets.token_hex(16)
-    return {"salt": salt, "hash": _hash_password(password, salt)}
-
-
-def verify_password(password: str, rec: Dict[str, str]) -> bool:
-    if not rec or "salt" not in rec or "hash" not in rec:
-        return False
-    return _hash_password(password, rec["salt"]) == rec["hash"]
-
-
-def log_action(db, action_type: str, usuario: str, detalle: str = "") -> None:
+def verify_password(password: str, hashed: str) -> bool:
     try:
-        db.collection("logs").add(
-            {
-                "accion": action_type,
-                "usuario": usuario,
-                "detalle": detalle,
-                "fecha": now_cdmx().isoformat(),
-            }
-        )
-    except Exception:
-        # no bloqueamos la app por logs
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+    except:
+        return False
+
+def log_action(action_type: str, usuario: str, detalle: str = ""):
+    try:
+        db.collection("logs").add({
+            "accion": action_type,
+            "usuario": usuario,
+            "detalle": detalle,
+            "fecha": now_cdmx().isoformat()
+        })
+    except:
         pass
 
-
-# =========================
-# FIREBASE INIT
-# =========================
-try:
-    creds = st.secrets["firebase_credentials"]
-    cred = credentials.Certificate(dict(creds))
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(cred)
-    db = firestore.client()
-except Exception as e:
-    st.error(f"❌ Firebase error: {e}")
-    st.stop()
-
-# =========================
-# SESSION STATE
-# =========================
-ss = st.session_state
-ss.setdefault("usuario_actual", None)  # email
-ss.setdefault("cliente_confirmado", None)
-ss.setdefault("promo_shown", False)
-ss.setdefault("cart_pickup", [])
-ss.setdefault("cart_mesa", [])
-ss.setdefault("mesa_actual", "")
-
-# =========================
-# MENÚ — basado en tus fotos
-# (Incluye station + tiempos para ETA)
-# =========================
-# station:
-#   - barista: café/bebidas
-#   - fryer: churros
-#   - cold: malteadas/frappes
-#   - stock: listo
-
-DEFAULT_MENU: List[Dict[str, Any]] = [
-    # CHURROS
+# ────────────────────────────────────────────────
+# MENÚ COMPLETO
+# ────────────────────────────────────────────────
+DEFAULT_MENU = [
     {"id": "churro_3", "name": "Churros tradicionales (3 pzas)", "category": "Churros", "price": 49, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "active": True},
     {"id": "churro_6", "name": "Churros tradicionales (6 pzas)", "category": "Churros", "price": 79, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "active": True},
     {"id": "churro_12", "name": "Churros tradicionales (12 pzas)", "category": "Churros", "price": 149, "station": "fryer", "prep_time": 180, "batch_capacity": 6, "active": True},
-
     {"id": "churro_relleno_1", "name": "Churro relleno (1 pza)", "category": "Rellenos", "price": 35, "station": "fryer", "prep_time": 210, "batch_capacity": 3, "active": True},
     {"id": "churro_relleno_3", "name": "Churros rellenos (3 pzas)", "category": "Rellenos", "price": 99, "station": "fryer", "prep_time": 210, "batch_capacity": 3, "active": True},
-
     {"id": "mini_churros", "name": "Mini churros (15 pzas)", "category": "Mini Churros", "price": 79, "station": "fryer", "prep_time": 240, "batch_capacity": 15, "active": True},
-
-    # POSTRES / SALADOS
     {"id": "bunuelos", "name": "Buñuelos (2 pzas)", "category": "Postres", "price": 49, "station": "stock", "prep_time": 0, "active": True},
     {"id": "carlota", "name": "Carlota (fresa / vainilla / chocolate)", "category": "Postres", "price": 75, "station": "stock", "prep_time": 0, "active": True},
     {"id": "adelitas", "name": "Adelitas (queso / española / jamón y queso)", "category": "Antojitos", "price": 139, "station": "stock", "prep_time": 0, "active": True},
     {"id": "salsa_extra", "name": "Salsa extra (cajeta / chocolate / lechera)", "category": "Extras", "price": 15, "station": "stock", "prep_time": 0, "active": True},
-
-    # DESAYUNOS (incluye bebida 354 ml)
     {"id": "chilaquiles", "name": "Chilaquiles (verde o roja) — incluye bebida 354 ml", "category": "Desayunos", "price": 149, "station": "stock", "prep_time": 480, "active": True, "includes_drink_354": True},
     {"id": "enchiladas", "name": "Enchiladas (verde o roja) — incluye bebida 354 ml", "category": "Desayunos", "price": 149, "station": "stock", "prep_time": 540, "active": True, "includes_drink_354": True},
     {"id": "enfrijoladas", "name": "Enfrijoladas — incluye bebida 354 ml", "category": "Desayunos", "price": 149, "station": "stock", "prep_time": 540, "active": True, "includes_drink_354": True},
     {"id": "molletes", "name": "Molletes — incluye bebida 354 ml", "category": "Desayunos", "price": 139, "station": "stock", "prep_time": 420, "active": True, "includes_drink_354": True},
     {"id": "sincronizadas", "name": "Sincronizadas — incluye bebida 354 ml", "category": "Desayunos", "price": 129, "station": "stock", "prep_time": 360, "active": True, "includes_drink_354": True},
-
-    # PROMOS (con horarios)
     {"id": "promo_viejos_tiempos", "name": "Recordando viejos tiempos (1L chocolate + 6 churros)", "category": "Promociones", "price": 229, "station": "mix", "prep_time": 0, "active": True, "schedule": "08:00-12:00"},
     {"id": "promo_dulce_dia", "name": "Empieza un dulce día (café de olla + churro relleno)", "category": "Promociones", "price": 69, "station": "mix", "prep_time": 0, "active": True, "schedule": "08:00-12:00"},
     {"id": "promo_granizados", "name": "Congelando momentos (2 granizados 354 ml)", "category": "Promociones", "price": 99, "station": "mix", "prep_time": 0, "active": True, "schedule": "13:00-17:00"},
-
-    # CAFÉ
     {"id": "espresso", "name": "Espresso", "category": "Café", "price": 39, "station": "barista", "prep_time": 180, "active": True},
     {"id": "americano", "name": "Americano", "category": "Café", "price": 45, "station": "barista", "prep_time": 180, "active": True},
     {"id": "cafe_olla", "name": "Café de olla", "category": "Café", "price": 55, "station": "barista", "prep_time": 240, "active": True},
-
     {"id": "latte", "name": "Café Latte", "category": "Café", "price": 65, "station": "barista", "prep_time": 240, "active": True},
     {"id": "mocha", "name": "Mocha", "category": "Café", "price": 75, "station": "barista", "prep_time": 270, "active": True},
     {"id": "capuccino", "name": "Capuccino", "category": "Café", "price": 75, "station": "barista", "prep_time": 270, "active": True},
     {"id": "chai_latte", "name": "Chai Latte", "category": "Café", "price": 75, "station": "barista", "prep_time": 300, "active": True},
-
     {"id": "te_354", "name": "Té (354 ml)", "category": "Café", "price": 40, "station": "barista", "prep_time": 180, "active": True},
-
-    # CHOCOLATE CALIENTE
     {"id": "chocolate_354", "name": "Chocolate caliente 354 ml", "category": "Chocolate", "price": 79, "station": "barista", "prep_time": 240, "active": True},
     {"id": "chocolate_473", "name": "Chocolate caliente 473 ml", "category": "Chocolate", "price": 89, "station": "barista", "prep_time": 300, "active": True},
-
-    # FRAPPES / GRANIZADOS
     {"id": "frappe_354", "name": "Frappe / Granizado 354 ml", "category": "Bebidas frías", "price": 79, "station": "cold", "prep_time": 240, "active": True},
     {"id": "frappe_473", "name": "Frappe / Granizado 473 ml", "category": "Bebidas frías", "price": 89, "station": "cold", "prep_time": 270, "active": True},
-
-    # MALTEADAS
     {"id": "malteada_354", "name": "Malteada 354 ml", "category": "Bebidas frías", "price": 99, "station": "cold", "prep_time": 240, "active": True},
     {"id": "malteada_473", "name": "Malteada 473 ml", "category": "Bebidas frías", "price": 115, "station": "cold", "prep_time": 270, "active": True},
-
-    # OTRAS
     {"id": "refresco_355", "name": "Refresco 355 ml", "category": "Bebidas", "price": 45, "station": "stock", "prep_time": 0, "active": True},
     {"id": "agua_500", "name": "Agua natural 500 ml", "category": "Bebidas", "price": 30, "station": "stock", "prep_time": 0, "active": True},
 ]
 
-# Sanitiza
-DEFAULT_MENU = [m for m in DEFAULT_MENU if isinstance(m, dict) and "id" in m]
-MENU_INDEX: Dict[str, Dict[str, Any]] = {m["id"]: m for m in DEFAULT_MENU}
+MENU_INDEX = {m["id"]: m for m in DEFAULT_MENU if m.get("active", True)}
 
-FRYER_BASKETS = 2  # 2 canastillas
+FRYER_BASKETS = 2
 
-# =========================
-# USUARIOS / REWARDS
-# =========================
-
+# ────────────────────────────────────────────────
+# REWARDS HELPERS
+# ────────────────────────────────────────────────
 def get_user(identifier: str) -> Optional[Dict[str, Any]]:
-    # 1) Por doc id = email
-    doc = db.collection("usuarios").document(identifier).get()
+    doc = db.collection("usuarios").document(identifier.lower()).get()
     if doc.exists:
         d = doc.to_dict() or {}
-        d.setdefault("email", identifier)
+        d.setdefault("email", identifier.lower())
         return d
-
-    # 2) Por cliente_id
-    query = db.collection("usuarios").where("cliente_id", "==", identifier).limit(1).stream()
-    for r in query:
+    q = db.collection("usuarios").where("cliente_id", "==", identifier.upper()).limit(1).stream()
+    for r in q:
         d = r.to_dict() or {}
         d.setdefault("email", r.id)
         return d
-
     return None
 
-
-def save_user(email: str, data: Dict[str, Any]) -> None:
-    db.collection("usuarios").document(email).set(data)
-
+def save_user(email: str, data: Dict[str, Any]):
+    db.collection("usuarios").document(email.lower()).set(data, merge=True)
 
 def reward_apply(user: Dict[str, Any], stars_add: int = 0, helados_add: int = 0) -> Dict[str, Any]:
-    user["estrellas"] = int(user.get("estrellas", 0)) + int(stars_add)
-    user["helados"] = int(user.get("helados", 0)) + int(helados_add)
-
-    # Nivel: green -> gold a 200
+    user["estrellas"] = int(user.get("estrellas", 0)) + stars_add
+    user["helados"] = int(user.get("helados", 0)) + helados_add
     if user.get("nivel") == "green" and user["estrellas"] >= 200:
         user["nivel"] = "gold"
         user["estrellas"] = 0
-        log_action(db, "recompensa", user.get("email", ""), "Ascenso a GOLD por 200 estrellas")
-
-    # Gold: cada 100 estrellas = bebida (log)
+        log_action("recompensa", user.get("email", ""), "Ascenso a GOLD")
     if user.get("nivel") == "gold":
         bebidas = user["estrellas"] // 100
-        user["estrellas"] = user["estrellas"] % 100
-        if bebidas > 0:
-            for _ in range(int(bebidas)):
-                log_action(db, "recompensa", user.get("email", ""), "🎁 Bebida GOLD (100 estrellas)")
-
-    user["canjear_helado"] = int(user.get("helados", 0)) >= 6
+        user["estrellas"] %= 100
+        for _ in range(bebidas):
+            log_action("recompensa", user.get("email", ""), "Bebida GOLD")
+    user["canjear_helado"] = user["helados"] >= 6
     return user
 
-
-def update_points(identifier: str, stars_add: int = 0, helados_add: int = 0, detalle: str = "") -> None:
+def update_points(identifier: str, stars_add: int = 0, helados_add: int = 0, detalle: str = ""):
     user = get_user(identifier)
     if not user:
-        st.warning("Usuario no encontrado.")
         return
-
-    user = reward_apply(user, stars_add=stars_add, helados_add=helados_add)
+    user = reward_apply(user, stars_add, helados_add)
     save_user(user["email"], user)
-
     if detalle:
-        log_action(db, "consumo", user["email"], detalle)
-    else:
-        log_action(db, "consumo", user["email"], f"+{stars_add} estrellas, +{helados_add} helados")
+        log_action("consumo", user["email"], detalle)
 
-
-def canjear_helado(identifier: str) -> None:
+def canjear_helado(identifier: str):
     user = get_user(identifier)
-    if not user:
-        st.warning("Usuario no encontrado.")
+    if not user or user["helados"] < 6:
+        st.warning("No tienes suficientes helados")
         return
-    if int(user.get("helados", 0)) >= 6:
-        user["helados"] = int(user.get("helados", 0)) - 6
-        user["canjear_helado"] = False
-        save_user(user["email"], user)
-        st.success("🎉 Helado canjeado exitosamente")
-        log_action(db, "canje", user["email"], "Helado (6)")
-    else:
-        st.warning("❌ No tiene suficientes helados")
+    user["helados"] -= 6
+    user["canjear_helado"] = False
+    save_user(user["email"], user)
+    st.success("Helado canjeado")
+    log_action("canje", user["email"], "Helado (6)")
 
-
-def show_user_summary(user: Dict[str, Any]) -> None:
-    st.markdown(f"<div class='card'>", unsafe_allow_html=True)
-    st.markdown(f"<div class='card-title'>Tu perfil</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='small-muted'>Correo</div><div><b>{user.get('email','')}</b></div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='small-muted'>Número de cliente</div><div><b>{user.get('cliente_id','No asignado')}</b></div>", unsafe_allow_html=True)
-
-    nivel = user.get("nivel", "green")
-    st.markdown(f"<div class='small-muted'>Nivel</div>", unsafe_allow_html=True)
-    st.markdown(
-        f"<div class='badge'>{'🥇 Gold' if nivel=='gold' else '🥈 Green'}</div>",
-        unsafe_allow_html=True,
-    )
-
-    progress_max = 100 if nivel == "gold" else 200
-    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-    st.progress(min(float(user.get("estrellas", 0)) / progress_max, 1.0), text=f"{int(user.get('estrellas',0))} / {progress_max} estrellas")
-    st.markdown(f"<div class='small-muted'>Helados acumulados</div><div><b>🍦 {int(user.get('helados',0))} / 6</b></div>", unsafe_allow_html=True)
-
-    if user.get("canjear_helado"):
-        st.success("🎁 ¡Puedes canjear un helado!")
-        if st.button("Canjear helado ahora", key=f"canj_{user.get('email','')}"):
-            canjear_helado(user.get("email", ""))
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# =========================
-# PROMOS (POP-UPS) — usando st.dialog
-# =========================
-
-def _goto(page_name: str):
-    st.query_params["page"] = page_name
-    st.rerun()
-
-
-def show_promotions_popups():
-    # Solo una vez por sesión
-    if ss.promo_shown:
-        return
-
-    hour = now_cdmx().hour
-
-    if 8 <= hour < 12:
-        @st.dialog("☕ Recordando viejos tiempos")
-        def _promo1():
-            st.write("1 litro de chocolate (a elegir) + 6 churros tradicionales — **$229**")
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button("👉 Pedir ahora (Pick Up)", key="promo1_pickup"):
-                    _goto("Pick Up")
-            with c2:
-                if st.button("👉 Pedir en mesa", key="promo1_mesa"):
-                    _goto("Mesa")
-        _promo1()
-
-        @st.dialog("🥐 Empieza un dulce día")
-        def _promo2():
-            st.write("Café de olla + 1 churro relleno — **$69**")
-            if st.button("👉 Pedir ahora", key="promo2_pickup"):
-                _goto("Pick Up")
-        _promo2()
-
-    elif 13 <= hour < 17:
-        @st.dialog("❄️ Congelando momentos")
-        def _promo3():
-            st.write("Llévate 2 granizados de 354 ml — **$99**")
-            if st.button("👉 Pedir ahora", key="promo3_pickup"):
-                _goto("Pick Up")
-        _promo3()
-
-    ss.promo_shown = True
-
-
-# =========================
+# ────────────────────────────────────────────────
 # ETA / COLAS
-# =========================
-
+# ────────────────────────────────────────────────
 def calc_station_work_seconds(items: List[Dict[str, Any]]) -> Tuple[int, int, int]:
-    """Regresa (barista_seconds, fryer_seconds, cold_seconds)"""
-    barista_total = 0
-    fryer_total = 0
-    cold_total = 0
-
+    barista_total = fryer_total = cold_total = 0
     for it in items:
         item = MENU_INDEX.get(it.get("menu_id"))
         if not item:
@@ -575,1071 +222,689 @@ def calc_station_work_seconds(items: List[Dict[str, Any]]) -> Tuple[int, int, in
         qty = int(it.get("qty", 1))
         station = item.get("station", "barista")
         prep = int(item.get("prep_time", 180))
-
         if station == "barista":
             barista_total += prep * qty
         elif station == "cold":
             cold_total += prep * qty
         elif station == "fryer":
-            cap = int(item.get("batch_capacity", 1))
-            batches = -(-qty // cap)  # ceil
-            rounds = -(-batches // max(1, FRYER_BASKETS))
+            cap = int(item.get("batch_capacity", 6))
+            batches = -(-qty // cap)
+            rounds = -(-batches // FRYER_BASKETS)
             fryer_total += rounds * prep
         else:
             barista_total += prep * qty
-
     return barista_total, fryer_total, cold_total
-
 
 def fetch_queue_load_seconds() -> Tuple[int, int, int]:
     barista_q = fryer_q = cold_q = 0
     q = db.collection("orders").where("status", "in", ["RECEIVED", "IN_PROGRESS"]).stream()
     for d in q:
         o = d.to_dict() or {}
-        items = o.get("items", [])
-        b, f, c = calc_station_work_seconds(items)
+        b, f, c = calc_station_work_seconds(o.get("items", []))
         barista_q += b
         fryer_q += f
         cold_q += c
     return barista_q, fryer_q, cold_q
 
-
 def estimate_eta_seconds(new_items: List[Dict[str, Any]]) -> int:
     q_barista, q_fryer, q_cold = fetch_queue_load_seconds()
     b_new, f_new, c_new = calc_station_work_seconds(new_items)
-    # se prepara en paralelo por estaciones
     return int(max(q_barista + b_new, q_fryer + f_new, q_cold + c_new))
 
+# ────────────────────────────────────────────────
+# GLOBAL STATE
+# ────────────────────────────────────────────────
+if "screen" not in st.session_state:
+    st.session_state.screen = "LOGIN"
+if "auth" not in st.session_state:
+    st.session_state.auth = False
+    st.session_state.username = None
+    st.session_state.cliente_id = None
+if "cart_mesa" not in st.session_state:
+    st.session_state.cart_mesa = []
+if "cart_pickup" not in st.session_state:
+    st.session_state.cart_pickup = []
+if "mesa_num" not in st.session_state:
+    st.session_state.mesa_num = ""
 
-# =========================
-# PAGOS — Mercado Pago (opcional)
-# =========================
+# ────────────────────────────────────────────────
+# SIDEBAR
+# ────────────────────────────────────────────────
+if st.session_state.auth:
+    with st.sidebar:
+        st.title(f"🥖 {st.session_state.username}")
+        st.caption(f"ID Cliente: {st.session_state.cliente_id or '—'}")
+        st.markdown("---")
+        st.button("🏠 Inicio", on_click=lambda: setattr(st.session_state, "screen", "HOME"))
+        st.button("🍽️ Pedir en Mesa", on_click=lambda: setattr(st.session_state, "screen", "MESA"))
+        st.button("🚗 Pick Up", on_click=lambda: setattr(st.session_state, "screen", "PICKUP"))
+        st.button("🎁 Rewards", on_click=lambda: setattr(st.session_state, "screen", "REWARDS"))
+        st.button("🧾 Mis Pedidos", on_click=lambda: setattr(st.session_state, "screen", "MIS_PEDIDOS"))
+        st.button("👤 Mi Perfil", on_click=lambda: setattr(st.session_state, "screen", "PERFIL"))
+        st.markdown("---")
+        with st.expander("🛡️ Admin"):
+            pin = st.text_input("PIN Admin", type="password", key="admin_pin")
+            if pin == "2424":
+                st.success("Modo Admin ON")
+                st.button("Ir a Admin", on_click=lambda: setattr(st.session_state, "screen", "ADMIN"))
+        if st.button("🚪 Cerrar Sesión", type="primary"):
+            st.session_state.clear()
+            st.rerun()
 
-def create_payment_link(total_amount: float, description: str) -> Optional[str]:
-    access_token = st.secrets.get("mercadopago_access_token")
-    if access_token:
-        try:
-            from mercadopago import SDK
-
-            sdk = SDK(access_token)
-            preference_data = {
-                "items": [
-                    {
-                        "title": description,
-                        "quantity": 1,
-                        "currency_id": "MXN",
-                        "unit_price": float(total_amount),
-                    }
-                ],
-                "auto_return": "approved",
-            }
-            pref = sdk.preference().create(preference_data)
-            return pref["response"].get("init_point") or pref["response"].get("sandbox_init_point")
-        except Exception as e:
-            st.warning(f"⚠️ No se pudo crear link de pago con Mercado Pago: {e}")
-
-    # fallback: link fijo si lo guardas en secrets
-    return st.secrets.get("mp_payment_link")
-
-
-# =========================
-# UI — MENU / CART
-# =========================
-
-def _cart_add(cart_key: str, menu_id: str, qty: int, note: str = ""):
-    if qty <= 0:
-        return
-    ss[cart_key].append({"menu_id": menu_id, "qty": int(qty), "note": note.strip()})
-
-
-def render_menu_store(cart_key: str):
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>🧾 Menú</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-sub'>Elige productos y agrégalos al carrito.</div>", unsafe_allow_html=True)
-
-    cats = ["Todas"] + sorted({m["category"] for m in DEFAULT_MENU if m.get("active")})
-    c1, c2, c3 = st.columns([2, 1, 1])
-    with c1:
-        cat = st.selectbox("Filtrar por categoría", options=cats, key=f"cat_{cart_key}")
-    with c2:
-        only_promos = st.checkbox("Solo promos", value=False, key=f"promo_only_{cart_key}")
-    with c3:
-        search = st.text_input("Buscar", value="", key=f"search_{cart_key}")
-
-    filtered = [m for m in DEFAULT_MENU if m.get("active")]
-    if only_promos:
-        filtered = [m for m in filtered if m.get("category") == "Promociones"]
-    if cat != "Todas":
-        filtered = [m for m in filtered if m.get("category") == cat]
-    if search.strip():
-        s = search.strip().lower()
-        filtered = [m for m in filtered if s in m.get("name", "").lower()]
-
-    st.markdown("<hr class='hr-soft' />", unsafe_allow_html=True)
-
-    cols = st.columns(3)
-    for i, m in enumerate(filtered):
-        with cols[i % 3]:
-            st.markdown("<div class='card'>", unsafe_allow_html=True)
-            st.markdown(f"<div class='card-title'>{m['name']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='card-sub'>{m['category']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='card-price'>{money(m['price'])}</div>", unsafe_allow_html=True)
-
-            # Nota opcional (salsas, instrucciones)
-            note = ""
-            if m.get("includes_drink_354"):
-                note = st.selectbox(
-                    "Incluye bebida 354 ml",
-                    options=["Café (Americano)", "Jugo"],
-                    key=f"drink_{cart_key}_{m['id']}",
-                )
-
-            qty = st.number_input(
-                "Cantidad",
-                min_value=1,
-                value=1,
-                step=1,
-                key=f"qty_{cart_key}_{m['id']}",
-            )
-
-            add_note = st.text_input("Nota (opcional)", value="", key=f"note_{cart_key}_{m['id']}")
-            final_note = ""
-            if m.get("includes_drink_354"):
-                final_note = f"Bebida: {note}. {add_note}".strip()
+# ────────────────────────────────────────────────
+# LOGIN
+# ────────────────────────────────────────────────
+if st.session_state.screen == "LOGIN":
+    st.subheader("Iniciar Sesión")
+    with st.form("login"):
+        ident = st.text_input("Correo o ID Cliente")
+        pw = st.text_input("Contraseña", type="password")
+        if st.form_submit_button("Entrar", type="primary"):
+            user = get_user(ident)
+            if user and verify_password(pw, user.get("password_hash", "")):
+                st.session_state.auth = True
+                st.session_state.username = user["email"]
+                st.session_state.cliente_id = user.get("cliente_id")
+                st.session_state.screen = "HOME"
+                st.rerun()
             else:
-                final_note = add_note.strip()
+                st.error("Credenciales incorrectas")
+    if st.button("¿Nuevo aquí? Regístrate"):
+        st.session_state.screen = "REGISTRO"
+        st.rerun()
 
-            if st.button("Agregar", key=f"add_{cart_key}_{m['id']}"):
-                _cart_add(cart_key, m["id"], int(qty), final_note)
-                st.toast(f"Agregado: {m['name']} x{qty}")
+# ────────────────────────────────────────────────
+# REGISTRO
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "REGISTRO":
+    st.subheader("Crear Cuenta")
+    with st.form("registro"):
+        col1, col2 = st.columns(2)
+        email = col1.text_input("Correo electrónico")
+        full_name = col2.text_input("Nombre completo")
+        col3, col4 = st.columns(2)
+        phone = col3.text_input("Teléfono (WhatsApp)")
+        pw = col4.text_input("Contraseña", type="password")
+        if st.form_submit_button("Crear", type="primary"):
+            if len(pw) < 6:
+                st.error("Contraseña corta")
+            else:
+                email_clean = email.lower().strip()
+                if get_user(email_clean):
+                    st.error("Correo ya registrado")
+                else:
+                    cid = generate_cliente_id()
+                    data = {
+                        "email": email_clean,
+                        "password_hash": hash_password(pw),
+                        "full_name": full_name,
+                        "phone": phone,
+                        "cliente_id": cid,
+                        "estrellas": 0,
+                        "helados": 0,
+                        "nivel": "green",
+                        "created_at": now_cdmx().isoformat()
+                    }
+                    save_user(email_clean, data)
+                    st.success(f"Cuenta creada! ID cliente: {cid}")
+                    st.session_state.screen = "LOGIN"
+                    st.rerun()
+    if st.button("Volver al login"):
+        st.session_state.screen = "LOGIN"
+        st.rerun()
 
-            st.markdown("</div>", unsafe_allow_html=True)
+# ────────────────────────────────────────────────
+# HOME
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "HOME":
+    st.title("¡Bienvenid@ a Churrería Porfirio!")
+    st.subheader("Elige cómo ordenar")
+    c1, c2 = st.columns(2)
+    c1.button("🍽️ Pedir en Mesa", type="primary", use_container_width=True, on_click=lambda: setattr(st.session_state, "screen", "MESA"))
+    c2.button("🚗 Pick Up", type="primary", use_container_width=True, on_click=lambda: setattr(st.session_state, "screen", "PICKUP"))
+    st.markdown("---")
+    hour = now_cdmx().hour
+    if 8 <= hour < 12:
+        st.info("☕ Promo matutina activa: café + churro relleno con desayunos")
+    elif 13 <= hour < 17:
+        st.success("🍦 Promo tarde activa: 2 granizados por $99")
+
+# ────────────────────────────────────────────────
+# REWARDS
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "REWARDS":
+    st.subheader("🎖️ Mis Recompensas")
+    user = get_user(st.session_state.username)
+    if user:
+        estrellas = user.get("estrellas", 0)
+        helados = user.get("helados", 0)
+        nivel = user.get("nivel", "green")
+        st.metric("Estrellas", estrellas)
+        st.metric("Helados comprados", f"{helados} / 6")
+        if nivel == "green":
+            st.progress(estrellas / 200)
+            st.caption(f"Faltan {200 - estrellas} para Gold")
+        else:
+            st.progress(estrellas / 100)
+            st.caption(f"Faltan {100 - estrellas} para bebida gratis")
+        if helados >= 6:
+            st.success("Puedes canjear un helado gratis")
+            if st.button("Canjear ahora"):
+                canjear_helado(st.session_state.username)
+                st.rerun()
+
+# ────────────────────────────────────────────────
+# MIS PEDIDOS
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "MIS_PEDIDOS":
+    st.subheader("Mis Pedidos")
+    q = db.collection("orders").where("user_email", "==", st.session_state.username).order_by("created_at", direction=firestore.Query.DESCENDING).limit(50).stream()
+    data = [d.to_dict() for d in q]
+    if data:
+        df = pd.DataFrame(data)
+        st.dataframe(df[["type", "status", "total", "created_at"]])
+    else:
+        st.info("No tienes pedidos aún")
+
+# ────────────────────────────────────────────────
+# PERFIL
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "PERFIL":
+    st.subheader("Mi Perfil")
+    user = get_user(st.session_state.username)
+    if user:
+        st.write("Nombre:", user.get("full_name", "—"))
+        st.write("Teléfono:", user.get("phone", "—"))
+        st.write("Correo:", user.get("email", "—"))
+        st.write("ID Cliente:", user.get("cliente_id", "—"))
+
+# ────────────────────────────────────────────────
+# ADMIN (básico - cola + estado + recompensas manuales)
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "ADMIN":
+    st.subheader("Panel Admin")
+    pin = st.text_input("PIN", type="password")
+    if pin == "2424":
+        tab = st.radio("Sección", ["Cola Pedidos", "Recompensas Manual", "Arqueo Básico"])
+        if tab == "Cola Pedidos":
+            st.subheader("Pedidos en cola")
+            q = db.collection("orders").where("status", "in", ["RECEIVED", "IN_PROGRESS"]).stream()
+            data = []
+            for d in q:
+                o = d.to_dict()
+                o["id"] = d.id
+                data.append(o)
+            if data:
+                df = pd.DataFrame(data)
+                st.dataframe(df[["id", "type", "status", "total", "user_email"]])
+            else:
+                st.info("No hay pedidos en cola")
+        elif tab == "Recompensas Manual":
+            ident = st.text_input("Correo o ID Cliente")
+            if st.button("Buscar"):
+                user = get_user(ident)
+                if user:
+                    st.write("Encontrado:", user["email"])
+                    stars = st.number_input("Sumar estrellas", min_value=0, value=0)
+                    helados = st.number_input("Sumar helados", min_value=0, value=0)
+                    if st.button("Aplicar"):
+                        update_points(ident, stars, helados, "Admin manual")
+                        st.success("Actualizado")
+                else:
+                    st.error("No encontrado")
+        elif tab == "Arqueo Básico":
+            st.subheader("Arqueo rápido")
+            b20 = st.number_input("$20", 0)
+            b50 = st.number_input("$50", 0)
+            b100 = st.number_input("$100", 0)
+            b200 = st.number_input("$200", 0)
+            b500 = st.number_input("$500", 0)
+            tarjetas = st.number_input("Tarjetas", 0.0)
+            total_cash = b20*20 + b50*50 + b100*100 + b200*200 + b500*500
+            total = total_cash + tarjetas
+            st.metric("Total efectivo", money(total_cash))
+            st.metric("Total día", money(total))
+
+# ────────────────────────────────────────────────
+# DEFAULT
+# ────────────────────────────────────────────────
+else:
+    st.session_state.screen = "LOGIN"
+    st.rerun()
+
+st.markdown("---")
+st.caption(f"Churrería Porfirio © {now_cdmx().year} • Parte 1/2")
+
+# =============================================================================
+# CHURRERÍA PORFIRIO - PARTE 2/2 (Pantallas MESA + PICKUP + Carrito + ETA + Guardar)
+# Continuación directa de Parte 1
+# =============================================================================
+
+# ────────────────────────────────────────────────
+# RENDER MENÚ + CARRITO (funciones reutilizables)
+# ────────────────────────────────────────────────
+def render_menu_store(cart_key: str):
+    st.markdown("<div class='card'><h3>🧾 Menú de la Casa</h3><hr class='hr-soft'>", unsafe_allow_html=True)
+    
+    cats = ["Todas"] + sorted(set(m["category"] for m in DEFAULT_MENU if m.get("active")))
+    col_filter1, col_filter2 = st.columns([3, 1])
+    with col_filter1:
+        selected_cat = st.selectbox("Categoría", cats, key=f"cat_{cart_key}")
+    with col_filter2:
+        search_term = st.text_input("Buscar producto", key=f"search_{cart_key}").strip().lower()
+
+    filtered_menu = [m for m in DEFAULT_MENU if m.get("active")]
+    if selected_cat != "Todas":
+        filtered_menu = [m for m in filtered_menu if m["category"] == selected_cat]
+    if search_term:
+        filtered_menu = [m for m in filtered_menu if search_term in m["name"].lower()]
+
+    if not filtered_menu:
+        st.info("No se encontraron productos")
+    else:
+        cols = st.columns(3)
+        for idx, item in enumerate(filtered_menu):
+            with cols[idx % 3]:
+                st.markdown(f"""
+                <div class='card' style='height:220px;'>
+                    <h4>{item['name']}</h4>
+                    <small>{item['category']} • {money(item['price'])}</small>
+                """, unsafe_allow_html=True)
+                
+                qty = st.number_input("Cantidad", min_value=1, value=1, step=1, key=f"qty_{cart_key}_{item['id']}")
+                note = st.text_input("Nota (salsas, sin algo...)", key=f"note_{cart_key}_{item['id']}")
+                
+                if st.button("➕ Agregar", key=f"add_{cart_key}_{item['id']}"):
+                    st.session_state[cart_key].append({
+                        "menu_id": item["id"],
+                        "qty": qty,
+                        "note": note.strip(),
+                        "price": item["price"]
+                    })
+                    st.toast(f"Agregado: {item['name']} × {qty}")
+                    st.rerun()
+                
+                st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def render_cart(cart_key: str) -> Tuple[float, List[Dict[str, Any]]]:
-    cart = ss[cart_key]
-
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>🧺 Tu pedido</div>", unsafe_allow_html=True)
-
+def render_cart(cart_key: str) -> Tuple[float, List[Dict]]:
+    cart = st.session_state.get(cart_key, [])
+    st.markdown("<div class='card'><h3>🛒 Tu Pedido</h3><hr class='hr-soft'>", unsafe_allow_html=True)
+    
     if not cart:
-        st.info("Tu carrito está vacío.")
+        st.info("Tu carrito está vacío")
         st.markdown("</div>", unsafe_allow_html=True)
         return 0.0, []
-
+    
     subtotal = 0.0
-    new_cart: List[Dict[str, Any]] = []
-
-    for i, it in enumerate(cart):
-        item = MENU_INDEX.get(it.get("menu_id"))
-        if not item:
+    new_cart = []
+    
+    for i, item in enumerate(cart):
+        menu_item = MENU_INDEX.get(item["menu_id"])
+        if not menu_item:
             continue
-        qty = int(it.get("qty", 1))
-        price = float(item.get("price", 0))
-        line = price * qty
-        subtotal += line
-
-        cols = st.columns([6, 2, 2, 2])
-        with cols[0]:
-            st.write(f"**{item['name']}**")
-            if it.get("note"):
-                st.caption(it.get("note"))
-        with cols[1]:
-            qty_new = st.number_input("Cant.", min_value=1, value=qty, key=f"cartqty_{cart_key}_{i}")
-        with cols[2]:
-            st.write(money(line))
-        with cols[3]:
-            rm = st.button("Quitar", key=f"rm_{cart_key}_{i}")
-
-        if rm:
-            qty_new = 0
-
-        if qty_new > 0:
-            new_cart.append({"menu_id": it["menu_id"], "qty": int(qty_new), "note": it.get("note", "")})
-
-    ss[cart_key] = new_cart
-
-    st.markdown("<hr class='hr-soft' />", unsafe_allow_html=True)
-    st.markdown(f"### Total: {money(subtotal)}")
-
+        
+        line_total = item["qty"] * item["price"]
+        subtotal += line_total
+        
+        col1, col2, col3, col4 = st.columns([5, 2, 2, 1])
+        with col1:
+            st.write(f"**{menu_item['name']}**")
+            if item.get("note"):
+                st.caption(item["note"])
+        with col2:
+            new_qty = st.number_input("Cant.", min_value=1, value=item["qty"], key=f"cart_qty_{cart_key}_{i}")
+        with col3:
+            st.write(money(line_total))
+        with col4:
+            if st.button("🗑", key=f"rm_{cart_key}_{i}"):
+                new_qty = 0
+        
+        if new_qty > 0:
+            new_item = item.copy()
+            new_item["qty"] = new_qty
+            new_cart.append(new_item)
+    
+    st.session_state[cart_key] = new_cart
+    
+    st.markdown(f"<h4 style='text-align:right;'>Total: {money(subtotal)}</h4>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
-
+    
     return subtotal, new_cart
 
 
-# =========================
-# ORDERS
-# =========================
-
-def persist_order(order: Dict[str, Any]) -> Optional[str]:
-    try:
-        ref = db.collection("orders").add(order)
-        return ref[1].id
-    except Exception as e:
-        st.error(f"❌ No se pudo guardar el pedido: {e}")
-        return None
-
-
-# =========================
-# AUTH
-# =========================
-
-def ensure_user_fields(u: Dict[str, Any]) -> Dict[str, Any]:
-    u.setdefault("nivel", "green")
-    u.setdefault("estrellas", 0)
-    u.setdefault("helados", 0)
-    u.setdefault("canjear_helado", False)
-    u.setdefault("cliente_id", u.get("cliente_id") or generate_cliente_id())
-    return u
-
-
-def ui_header():
-    # Top header
-    c1, c2 = st.columns([3, 2])
-    with c1:
-        st.markdown(f"## {APP_TITLE}")
-        st.markdown("<div class='small-muted'>La churrería más grande de México (y la más deliciosa 😄)</div>", unsafe_allow_html=True)
-    with c2:
-        if ss.usuario_actual:
-            u = get_user(ss.usuario_actual)
-            if u:
-                nivel = u.get("nivel", "green")
-                st.markdown(
-                    f"<div class='card'><div class='small-muted'>Sesión</div><div><b>{u.get('email','')}</b></div>"
-                    f"<div style='margin-top:6px' class='badge'>{'🥇 Gold' if nivel=='gold' else '🥈 Green'}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-        else:
-            st.markdown(
-                "<div class='card'><div class='small-muted'>Sesión</div><div><b>Invitado</b></div><div class='small-muted'>Inicia sesión para recompensas</div></div>",
-                unsafe_allow_html=True,
-            )
-
-
-def get_page() -> str:
-    return st.query_params.get("page", "Inicio")
-
-
-def set_page(page: str):
-    st.query_params["page"] = page
-
-
-def nav_bar():
-    page = get_page()
-    pages = ["Inicio", "Registro", "Iniciar sesión", "Pick Up", "Mesa", "Admin"]
-
-    # Nav horizontal (muy estable)
-    choice = st.radio(
-        "",
-        options=pages,
-        index=pages.index(page) if page in pages else 0,
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    if choice != page:
-        set_page(choice)
+# ────────────────────────────────────────────────
+# PANTALLA MESA
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "MESA":
+    st.subheader("🍽️ Pedir en Mesa")
+    
+    if st.button("← Volver al Inicio", key="back_mesa"):
+        st.session_state.screen = "HOME"
         st.rerun()
-
-
-# =========================
-# ADMIN AUTH (ADMIN vs SUPER_ADMIN)
-# =========================
-# secrets.toml recomendado:
-# admin_credentials = { email="...", password="..." }
-# super_admin_credentials = { email="...", password="..." }
-#
-# (Opcional)
-# raffle_id = "RIFA_2026"
-
-def admin_role(email: str, password: str) -> Optional[str]:
-    email = (email or "").strip().lower()
-    password = password or ""
-
-    admin_data = st.secrets.get("admin_credentials") or {}
-    super_data = st.secrets.get("super_admin_credentials") or {}
-
-    if email and password and email == (super_data.get("email") or "").strip().lower() and password == (super_data.get("password") or ""):
-        return "SUPER_ADMIN"
-
-    if email and password and email == (admin_data.get("email") or "").strip().lower() and password == (admin_data.get("password") or ""):
-        return "ADMIN"
-
-    return None
-
-
-# =========================
-# ADMIN FEATURES — RIFA / CIERRE / UTILIDAD
-# =========================
-
-DEFAULT_FIXED_COSTS = {
-    "Nomina": 10100.00,
-    "Renta": 8750.00,
-    "Luz": 937.50,
-    "Agua": 300.00,
-    "Regalias": 3770.00,
-}
-
-DEFAULT_VARIABLE_COSTS = {
-    "SAMS/SUPER": 4086.92,
-    "Insumos Porf": 0.00,
-    "Mercado": 320.00,
-    "Molino": 100.00,
-    "Gas": 712.00,
-}
-
-DENOMS = [20, 50, 100, 200, 500]
-
-
-def _raffle_id() -> str:
-    return (st.secrets.get("raffle_id") or "RIFA_2026").strip()
-
-
-def raffle_assign_ticket(customer_id_or_email: str, sale_ticket: str, boleto_num: int, assigned_by: str) -> Tuple[bool, str]:
-    # validar cliente registrado
-    u = get_user((customer_id_or_email or "").strip())
-    if not u:
-        return False, "❌ Cliente NO encontrado (debe estar registrado)."
-
-    customer_id = u.get("cliente_id") or ""
-    if not customer_id:
-        return False, "❌ Cliente sin número de cliente asignado."
-
-    sale_ticket = (sale_ticket or "").strip()
-    if not sale_ticket:
-        return False, "❌ Falta número de ticket."
-
-    try:
-        boleto_num = int(boleto_num)
-    except Exception:
-        return False, "❌ Número de boleto inválido."
-
-    raffle_id = _raffle_id()
-    doc_id = f"{raffle_id}_{boleto_num}"
-    ref = db.collection("raffle_tickets").document(doc_id)
-
-    # si ya existe, no dejar
-    snap = ref.get()
-    if snap.exists:
-        d = snap.to_dict() or {}
-        return False, f"❌ Ese boleto ya está asignado (Cliente: {d.get('customer_id','')}, Ticket: {d.get('sale_ticket','')})."
-
-    # (Opcional) evitar ticket duplicado
-    # Si quieres permitir varios boletos por ticket, comenta este bloque.
-    dup = list(
-        db.collection("raffle_tickets")
-          .where("raffle_id", "==", raffle_id)
-          .where("sale_ticket", "==", sale_ticket)
-          .limit(1)
-          .stream()
-    )
-    if dup:
-        return False, "❌ Ese número de ticket ya fue usado para un boleto. (Evita duplicados)"
-
-    ref.set({
-        "raffle_id": raffle_id,
-        "boleto_num": int(boleto_num),
-        "customer_id": customer_id,
-        "customer_email": u.get("email", ""),
-        "sale_ticket": sale_ticket,
-        "assigned_by": assigned_by,
-        "assigned_at": now_cdmx().isoformat(),
-    })
-    return True, f"✅ Boleto {boleto_num} asignado a {customer_id}."
-
-
-def calc_cash_total(n20: int, n50: int, n100: int, n200: int, n500: int) -> float:
-    return float(20*n20 + 50*n50 + 100*n100 + 200*n200 + 500*n500)
-
-
-def save_cash_closing(date_iso: str, shift: str, bills: Dict[str, int], card_total: float, created_by: str) -> Tuple[bool, str]:
-    # shift: "MAT" | "VES"
-    doc_id = f"{date_iso}_{shift}"
-    ref = db.collection("cash_closings").document(doc_id)
-    if ref.get().exists:
-        return False, "❌ Ya existe un cierre para esa fecha/turno."
-
-    n20 = int(bills.get("20", 0))
-    n50 = int(bills.get("50", 0))
-    n100 = int(bills.get("100", 0))
-    n200 = int(bills.get("200", 0))
-    n500 = int(bills.get("500", 0))
-
-    cash_total = calc_cash_total(n20, n50, n100, n200, n500)
-    card_total = float(card_total or 0)
-    sales_total = float(cash_total + card_total)
-
-    ref.set({
-        "date": date_iso,
-        "shift": shift,
-        "bills": {"20": n20, "50": n50, "100": n100, "200": n200, "500": n500},
-        "cash_total": cash_total,
-        "card_total": card_total,
-        "sales_total": sales_total,
-        "created_by": created_by,
-        "created_at": now_cdmx().isoformat(),
-    })
-    return True, f"✅ Cierre guardado: {date_iso} {shift} — Cash {money(cash_total)} | Tarjetas {money(card_total)} | Total {money(sales_total)}"
-
-
-def fetch_closings_range(start_iso: str, end_iso: str) -> List[Dict[str, Any]]:
-    # Intento con query (puede pedir índice)
-    try:
-        q = (db.collection("cash_closings")
-             .where("date", ">=", start_iso)
-             .where("date", "<=", end_iso)
-             .stream())
-        out = []
-        for d in q:
-            row = d.to_dict() or {}
-            row["_id"] = d.id
-            out.append(row)
-        return out
-    except Exception:
-        # fallback: stream y filtrar
-        out = []
-        for d in db.collection("cash_closings").stream():
-            row = d.to_dict() or {}
-            date_iso = row.get("date", "")
-            if start_iso <= date_iso <= end_iso:
-                row["_id"] = d.id
-                out.append(row)
-        return out
-
-
-def save_profit_consolidation(start_iso: str, end_iso: str, totals: Dict[str, float], fixed_costs: Dict[str, float], variable_costs: Dict[str, float], created_by: str) -> Tuple[bool, str]:
-    doc_id = f"{start_iso}_{end_iso}"
-    ref = db.collection("profit_consolidations").document(doc_id)
-
-    total_costs = float(sum(fixed_costs.values()) + sum(variable_costs.values()))
-    profit = float(totals.get("sales_total", 0) - total_costs)
-
-    cash_total = float(totals.get("cash_total", 0))
-    # cash a regresar = cash - utilidad (si utilidad positiva)
-    if profit <= 0:
-        cash_to_return = cash_total
+    
+    st.session_state.mesa_num = st.text_input("Número de mesa / zona", value=st.session_state.mesa_num.strip())
+    
+    if not st.session_state.mesa_num:
+        st.warning("Por favor ingresa el número de mesa para continuar")
     else:
-        cash_to_return = max(0.0, cash_total - profit)
-
-    ref.set({
-        "period_start": start_iso,
-        "period_end": end_iso,
-        "totals": totals,
-        "fixed_costs": fixed_costs,
-        "variable_costs": variable_costs,
-        "total_costs": total_costs,
-        "profit": profit,
-        "cash_to_return": cash_to_return,
-        "created_by": created_by,
-        "created_at": now_cdmx().isoformat(),
-    })
-
-    msg = (
-        f"📌 Consolidación {start_iso} → {end_iso}\n"
-        f"- Ventas: {money(totals.get('sales_total',0))}\n"
-        f"- Costos: {money(total_costs)}\n"
-        f"- Utilidad: {money(profit)}\n"
-        f"- Cash a regresar a la churrería: {money(cash_to_return)}"
-    )
-    return True, msg
-
-
-
-
-# =========================
-# PAGES
-# =========================
-
-def page_inicio():
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>Bienvenid@</div>", unsafe_allow_html=True)
-    st.markdown(
-        "<div class='card-sub'>Ordena desde tu mesa, para recoger (Pick Up) y acumula recompensas.</div>",
-        unsafe_allow_html=True,
-    )
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>🍽️ Pedir en mesa</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-sub'>Ideal si ya estás sentado.</div>", unsafe_allow_html=True)
-        if st.button("Ir a Mesa"):
-            set_page("Mesa")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with c2:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>🚗 Pick Up</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-sub'>Pide y pasa por tu orden.</div>", unsafe_allow_html=True)
-        if st.button("Ir a Pick Up"):
-            set_page("Pick Up")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with c3:
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>⭐ Recompensas</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-sub'>Estrellas por tus compras + helados.</div>", unsafe_allow_html=True)
-        if st.button("Ver mi perfil"):
-            set_page("Iniciar sesión" if not ss.usuario_actual else "Inicio")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Perfil del usuario
-    if ss.usuario_actual:
-        u = get_user(ss.usuario_actual)
-        if u:
-            show_user_summary(u)
-
-
-def page_registro():
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>📝 Registro</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-sub'>Crea tu cuenta para acumular recompensas.</div>", unsafe_allow_html=True)
-
-    email = st.text_input("Correo electrónico", key="reg_email")
-    password = st.text_input("Contraseña", type="password", key="reg_pwd")
-
-    with st.container():
-        st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
-        do = st.button("Crear cuenta", key="btn_reg")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    if do:
-        email = (email or "").strip().lower()
-        if not email or "@" not in email:
-            st.error("Ingresa un correo válido.")
-            st.markdown("</div>", unsafe_allow_html=True)
-            return
-        if len(password) < 4:
-            st.error("La contraseña debe tener al menos 4 caracteres.")
-            st.markdown("</div>", unsafe_allow_html=True)
-            return
-
-        if get_user(email):
-            st.error("❌ Este correo ya está registrado. Usa otro.")
-            st.markdown("</div>", unsafe_allow_html=True)
-            return
-
-        cliente_id = generate_cliente_id()
-        passrec = make_password_record(password)
-        data = ensure_user_fields(
-            {
-                "email": email,
-                "cliente_id": cliente_id,
-                "password": passrec,
-                "fecha_registro": now_cdmx().isoformat(),
-            }
-        )
-        save_user(email, data)
-        log_action(db, "registro", email, f"cliente_id={cliente_id}")
-        st.success("✅ Usuario registrado con éxito")
-        st.info(f"Tu número de cliente es: **{cliente_id}**")
-        st.caption("Puedes iniciar sesión con tu correo o tu número de cliente.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-def page_login():
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>🔐 Iniciar sesión</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-sub'>Ingresa con tu correo o tu número de cliente.</div>", unsafe_allow_html=True)
-
-    identifier = st.text_input("Correo o número de cliente", key="login_ident")
-    password = st.text_input("Contraseña", type="password", key="login_pwd")
-
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
-        do = st.button("Iniciar sesión", key="btn_login")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with c2:
-        if ss.usuario_actual:
-            if st.button("Cerrar sesión", key="btn_logout"):
-                ss.usuario_actual = None
-                st.success("Sesión cerrada")
-                set_page("Inicio")
-                st.rerun()
-
-    if do:
-        user = get_user((identifier or "").strip())
-        if not user:
-            st.error("Usuario no encontrado.")
-        else:
-            rec = user.get("password")
-            if verify_password(password or "", rec or {}):
-                ss.usuario_actual = user.get("email")
-                st.success(f"Bienvenido {user.get('email','')}")
-                log_action(db, "login", user.get("email", ""), "")
-                set_page("Inicio")
-                st.rerun()
-            else:
-                st.error("Contraseña incorrecta.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-def page_pickup():
-    st.markdown("### 🚗 Pick Up")
-    c1, c2 = st.columns([3, 2])
-
-    with c1:
-        render_menu_store("cart_pickup")
-
-    with c2:
-        total, items = render_cart("cart_pickup")
-        if items:
-            eta_sec = estimate_eta_seconds(items)
-            mins = max(1, int(eta_sec) // 60)
-            st.info(f"⏱️ Tiempo estimado (cola actual): **{mins} min**")
-
-            note = st.text_area("Notas para tu pedido (opcional)", value="", key="pickup_note")
-
-            st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
-            do = st.button("Generar pedido y pagar", key="btn_pay_pickup")
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            if do:
-                pay_link = create_payment_link(total, description="Pedido Pick Up — Churrería Porfirio")
-                order = {
-                    "type": "PICKUP",
-                    "mesa": None,
-                    "items": items,
-                    "note": note.strip(),
-                    "totals": {"subtotal": float(total), "grand_total": float(total)},
-                    "status": "RECEIVED",
-                    "payment": {"method": "MP_LINK", "status": "PENDING", "url": pay_link},
-                    "eta_seconds": int(eta_sec),
-                    "created_at": now_cdmx().isoformat(),
-                    "updated_at": now_cdmx().isoformat(),
-                    "user_email": ss.usuario_actual,
-                }
-
-                oid = persist_order(order)
-                if oid:
-                    st.success(f"✅ Pedido creado. ID: {oid}")
-                    # Rewards: 1 estrella por cada $10
-                    if ss.usuario_actual:
-                        stars = int(float(total) // 10)
-                        if stars > 0:
-                            update_points(ss.usuario_actual, stars_add=stars, detalle=f"Compra PickUp {oid} — {stars} estrellas")
-
-                    if pay_link:
-                        st.link_button("Pagar ahora", pay_link)
-                    else:
-                        st.info("Pago: configura Mercado Pago en secrets para link automático.")
-
-                    ss.cart_pickup = []
-
-
-def page_mesa():
-    st.markdown("### 🍽️ Pedir en mesa")
-
-    top = st.columns([2, 3])
-    with top[0]:
-        ss.mesa_actual = st.text_input("Número de mesa", value=ss.mesa_actual, key="mesa_num")
-    with top[1]:
-        st.caption("Tip: si vas a usar tablets por mesa, aquí puedes prellenar el número.")
-
-    c1, c2 = st.columns([3, 2])
-
-    with c1:
         render_menu_store("cart_mesa")
-
-    with c2:
-        total, items = render_cart("cart_mesa")
-        if items:
-            if not ss.mesa_actual.strip():
-                st.warning("Ingresa el número de mesa para continuar.")
-                return
-
-            eta_sec = estimate_eta_seconds(items)
-            mins = max(1, int(eta_sec) // 60)
-            st.info(f"⏱️ Tiempo estimado: **{mins} min**")
-
-            pay_mode = st.selectbox(
-                "¿Cómo pagas?",
-                options=["Pagar ahora (Mercado Pago)", "Pagar en caja"],
-                key="mesa_pay_mode",
-            )
-            note = st.text_area("Notas para tu pedido (opcional)", value="", key="mesa_note")
-
-            st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
-            do = st.button("Enviar pedido", key="btn_send_mesa")
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            if do:
-                pay_link = None
-                pay_method = "CASHIER"
-                pay_status = "PENDING"
-
-                if pay_mode.startswith("Pagar ahora"):
-                    pay_link = create_payment_link(total, description=f"Pedido Mesa {ss.mesa_actual} — Churrería Porfirio")
-                    pay_method = "MP_LINK"
-
-                order = {
+        total, cart_items = render_cart("cart_mesa")
+        
+        if cart_items:
+            eta_sec = estimate_eta_seconds(cart_items)
+            eta_min = max(5, eta_sec // 60)  # mínimo 5 min para que no sea 0
+            st.info(f"⏱️ Tiempo estimado aproximado: **{eta_min} minutos** (según carga actual)")
+            
+            promo_msg = ""
+            hour = now_cdmx().hour
+            if 8 <= hour < 12:
+                promo_msg = "☕ Recuerda: con chilaquiles o desayunos, café de olla por nuestra cuenta"
+            elif 13 <= hour < 17:
+                promo_msg = "🍦 Compra 2 helados Bahama y llévate un churro relleno GRATIS"
+            if promo_msg:
+                st.success(promo_msg)
+            
+            if st.button("Confirmar y Enviar Pedido a Mesa", type="primary", use_container_width=True):
+                order_data = {
                     "type": "MESA",
-                    "mesa": ss.mesa_actual.strip(),
-                    "items": items,
-                    "note": note.strip(),
-                    "totals": {"subtotal": float(total), "grand_total": float(total)},
+                    "mesa": st.session_state.mesa_num,
+                    "items": cart_items,
+                    "total": total,
+                    "eta_seconds": eta_sec,
                     "status": "RECEIVED",
-                    "payment": {"method": pay_method, "status": pay_status, "url": pay_link},
-                    "eta_seconds": int(eta_sec),
+                    "user_email": st.session_state.username,
+                    "cliente_id": st.session_state.cliente_id,
                     "created_at": now_cdmx().isoformat(),
-                    "updated_at": now_cdmx().isoformat(),
-                    "user_email": ss.usuario_actual,
+                    "updated_at": now_cdmx().isoformat()
                 }
-
-                oid = persist_order(order)
-                if oid:
-                    st.success(f"✅ Pedido enviado. ID: {oid}")
-
-                    # Rewards: 1 estrella por cada $10
-                    if ss.usuario_actual:
-                        stars = int(float(total) // 10)
-                        if stars > 0:
-                            update_points(ss.usuario_actual, stars_add=stars, detalle=f"Compra Mesa {ss.mesa_actual} {oid} — {stars} estrellas")
-
-                    if pay_link:
-                        st.link_button("Pagar ahora", pay_link)
-                    else:
-                        st.info("Si pagas en caja, solo muestra tu número de pedido.")
-
-                    ss.cart_mesa = []
-
-
-def page_admin():
-    st.markdown("### 👑 Admin")
-
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>Acceso</div>", unsafe_allow_html=True)
-    admin_email = st.text_input("Correo de Admin", key="ad_email")
-    admin_pass = st.text_input("Contraseña Admin", type="password", key="ad_pwd")
-
-    role = admin_role(admin_email, admin_pass)
-    if not role:
-        st.error("Acceso denegado.")
-        st.caption("Configura admin_credentials y/o super_admin_credentials en secrets (email/password).")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
-    
-    st.success(f"Acceso autorizado — Rol: {role}")
-    ss["admin_role"] = role
-    ss["admin_email"] = (admin_email or "").strip().lower()
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-
-    # KPIs del día
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>📊 Resumen del día</div>", unsafe_allow_html=True)
-
-    # Nota: consulta por created_at string ISO. Para producción real: guarda created_date (YYYY-MM-DD)
-    today_prefix = now_cdmx().date().isoformat()
-    orders_today = [o.to_dict() for o in db.collection("orders").stream() if (o.to_dict() or {}).get("created_at", "").startswith(today_prefix)]
-
-    in_queue = [o for o in orders_today if o.get("status") in ("RECEIVED", "IN_PROGRESS")]
-    ready = [o for o in orders_today if o.get("status") == "READY"]
-    delivered = [o for o in orders_today if o.get("status") == "DELIVERED"]
-    ingreso = sum(float(o.get("totals", {}).get("grand_total", 0) or 0) for o in orders_today)
-
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Pedidos hoy", len(orders_today))
-    k2.metric("En cola", len(in_queue))
-    k3.metric("Listos", len(ready))
-    k4.metric("Ingresos (MXN)", money(ingreso))
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Cola
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>🧑‍🍳 Cola de pedidos</div>", unsafe_allow_html=True)
-
-    q = db.collection("orders").where("status", "in", ["RECEIVED", "IN_PROGRESS", "READY"]).stream()
-    for d in q:
-        o = d.to_dict() or {}
-        oid = d.id
-
-        items_txt = []
-        for it in o.get("items", []):
-            mid = it.get("menu_id")
-            if mid in MENU_INDEX:
-                nm = MENU_INDEX[mid]["name"]
-                items_txt.append(f"{nm} x{it.get('qty',1)}")
-        items_str = ", ".join(items_txt) if items_txt else "(sin items)"
-
-        cols = st.columns([2, 2, 2, 4, 2])
-        with cols[0]:
-            st.write(f"**{oid[:6]}**")
-            st.caption(o.get("type", "") + (f" · Mesa {o.get('mesa')}" if o.get("mesa") else ""))
-        with cols[1]:
-            st.write(money(o.get("totals", {}).get("grand_total", 0) or 0))
-        with cols[2]:
-            mins = max(1, int(o.get("eta_seconds", 0) or 0) // 60)
-            st.write(f"ETA: {mins} min")
-        with cols[3]:
-            st.write(items_str)
-            if o.get("note"):
-                st.caption(o.get("note"))
-        with cols[4]:
-            statuses = ["RECEIVED", "IN_PROGRESS", "READY", "DELIVERED", "CANCELLED"]
-            cur = o.get("status", "RECEIVED")
-            idx = statuses.index(cur) if cur in statuses else 0
-            new_status = st.selectbox("Estado", statuses, index=idx, key=f"sel_{oid}")
-            if st.button("Guardar", key=f"save_{oid}"):
-                db.collection("orders").document(oid).update({"status": new_status, "updated_at": now_cdmx().isoformat()})
-                st.toast("✅ Estado actualizado")
-                log_action(db, "order_status", admin_email, f"{oid} -> {new_status}")
+                oid = persist_order(order_data)
+                
+                # Aplicar estrellas
+                stars = int(total // 10)
+                if stars > 0:
+                    update_points(st.session_state.username, stars_add=stars, detalle=f"Pedido Mesa #{oid} → +{stars} estrellas")
+                
+                st.success(f"¡Pedido #{oid} enviado correctamente! ETA ~{eta_min} min")
+                st.balloons()
+                st.session_state.cart_mesa = []
                 st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Gestión de cliente
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>🎟️ Gestionar recompensas</div>", unsafe_allow_html=True)
+# ────────────────────────────────────────────────
+# PANTALLA PICK UP
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "PICKUP":
+    st.subheader("🚗 Pedir para Pick Up")
+    
+    if st.button("← Volver al Inicio", key="back_pickup"):
+        st.session_state.screen = "HOME"
+        st.rerun()
+    
+    render_menu_store("cart_pickup")
+    total, cart_items = render_cart("cart_pickup")
+    
+    if cart_items:
+        eta_sec = estimate_eta_seconds(cart_items)
+        eta_min = max(5, eta_sec // 60)
+        st.info(f"⏱️ Tiempo estimado para recoger: **{eta_min} minutos**")
+        
+        promo_msg = ""
+        hour = now_cdmx().hour
+        if 8 <= hour < 12:
+            promo_msg = "☕ Promo matutina activa hoy"
+        elif 13 <= hour < 17:
+            promo_msg = "🍦 Promo tarde activa hoy"
+        if promo_msg:
+            st.success(promo_msg)
+        
+        payment_method = st.radio("Forma de pago", ["Transferencia / Efectivo", "Mercado Pago"])
+        
+        if st.button("Confirmar y Generar Pedido Pick Up", type="primary", use_container_width=True):
+            order_data = {
+                "type": "PICKUP",
+                "items": cart_items,
+                "total": total,
+                "eta_seconds": eta_sec,
+                "status": "RECEIVED",
+                "payment_method": payment_method,
+                "user_email": st.session_state.username,
+                "cliente_id": st.session_state.cliente_id,
+                "created_at": now_cdmx().isoformat(),
+                "updated_at": now_cdmx().isoformat()
+            }
+            oid = persist_order(order_data)
+            
+            stars = int(total // 10)
+            if stars > 0:
+                update_points(st.session_state.username, stars_add=stars, detalle=f"Pedido PickUp #{oid} → +{stars} estrellas")
+            
+            st.success(f"¡Pedido #{oid} confirmado! Recógelo en ~{eta_min} minutos")
+            st.balloons()
+            st.session_state.cart_pickup = []
+            st.rerun()
 
-    tipo = st.radio("Tipo", ["Estrellas (por compra)", "Helados"], horizontal=True)
-    identificador_cliente = st.text_input("Correo o número del cliente", key="adm_ident")
 
-    if st.button("Confirmar cliente", key="adm_confirm"):
-        u = get_user((identificador_cliente or "").strip())
-        if u:
-            ss.cliente_confirmado = u.get("email")
-            st.success(f"Cliente encontrado: {u.get('email','')}")
-        else:
-            ss.cliente_confirmado = None
-            st.error("Cliente no encontrado.")
+# ────────────────────────────────────────────────
+# FIN DE PARTE 2
+# ────────────────────────────────────────────────
+st.markdown("---")
+st.caption(f"Churrería Porfirio © {now_cdmx().year} • Parte 2/2 - Pedidos y Carrito")
+# =============================================================================
+# CHURRERÍA PORFIRIO - PARTE 3/3 (PANEL ADMIN COMPLETO: Cola + Recompensas + Rifa + Arqueo + Utilidad)
+# Continuación directa de Parte 1 y Parte 2
+# =============================================================================
 
-    if ss.cliente_confirmado:
-        u = get_user(ss.cliente_confirmado)
-        if u:
-            show_user_summary(u)
-
-            if tipo.startswith("Estrellas"):
-                monto = st.number_input("Monto de compra ($MXN)", min_value=0, step=10, key="adm_monto")
-                if st.button("Registrar compra", key="adm_compra"):
-                    stars = int(float(monto) // 10)
-                    update_points(ss.cliente_confirmado, stars_add=stars, detalle=f"Compra manual admin: ${monto} -> {stars} estrellas")
-                    st.success("✅ Compra registrada")
-                    st.rerun()
+# ────────────────────────────────────────────────
+# ADMIN PANEL (completo)
+# ────────────────────────────────────────────────
+elif st.session_state.screen == "ADMIN":
+    st.subheader("🛡️ Panel de Administración")
+    
+    if st.button("← Volver al Inicio", key="back_admin"):
+        st.session_state.screen = "HOME"
+        st.rerun()
+    
+    pin = st.text_input("PIN de Acceso Admin", type="password", value="", key="admin_pin_input")
+    
+    if pin == "2424":  # ← CAMBIA ESTO POR TU PIN REAL O USA secrets
+        st.success("Acceso autorizado — Modo Admin activado")
+        log_action("admin_login", st.session_state.username, "Acceso panel admin")
+        
+        tab_admin = st.radio("Sección Admin", [
+            "Cola de Pedidos", 
+            "Gestión Recompensas", 
+            "Rifa Boletos", 
+            "Arqueo de Caja", 
+            "Consolidación Utilidad", 
+            "Logs Recientes"
+        ])
+        
+        if tab_admin == "Cola de Pedidos":
+            st.subheader("🧑‍🍳 Cola de Pedidos Activos")
+            status_filter = st.multiselect("Filtrar por estado", ["RECEIVED", "IN_PROGRESS", "READY", "DELIVERED", "CANCELLED"], default=["RECEIVED", "IN_PROGRESS"])
+            
+            q = db.collection("orders").where("status", "in", status_filter).order_by("created_at", direction=firestore.Query.DESCENDING).limit(50).stream()
+            data = []
+            for doc in q:
+                o = doc.to_dict()
+                o["id"] = doc.id
+                data.append(o)
+            
+            if data:
+                df = pd.DataFrame(data)
+                st.dataframe(df[["id", "type", "status", "total", "mesa", "user_email", "created_at"]])
+                
+                selected_oid = st.selectbox("Seleccionar pedido para actualizar", df["id"].tolist())
+                if selected_oid:
+                    order_data = df[df["id"] == selected_oid].iloc[0].to_dict()
+                    st.write("Detalles:")
+                    st.json(order_data)
+                    
+                    new_status = st.selectbox("Nuevo estado", ["RECEIVED", "IN_PROGRESS", "READY", "DELIVERED", "CANCELLED"], index=["RECEIVED", "IN_PROGRESS", "READY", "DELIVERED", "CANCELLED"].index(order_data["status"]))
+                    if st.button("Actualizar Estado"):
+                        db.collection("orders").document(selected_oid).update({
+                            "status": new_status,
+                            "updated_at": now_cdmx().isoformat(),
+                            "updated_by": st.session_state.username
+                        })
+                        log_action("order_update", st.session_state.username, f"Pedido {selected_oid} → {new_status}")
+                        st.success("Estado actualizado")
+                        st.rerun()
             else:
-                cantidad = st.number_input("Cantidad de helados", min_value=1, step=1, key="adm_helados")
-                if st.button("Registrar helados", key="adm_add_helados"):
-                    update_points(ss.cliente_confirmado, helados_add=int(cantidad), detalle=f"Helados manual admin: +{cantidad}")
-                    st.success("✅ Helados registrados")
-                    st.rerun()
-
-                st.markdown("<hr class='hr-soft' />", unsafe_allow_html=True)
-                if st.button("Canjear helado (6)", key="adm_canjear"):
-                    canjear_helado(ss.cliente_confirmado)
-                    st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # =========================
-    # 🎟️ RIFA — Asignar boletos (ADMIN + SUPER_ADMIN)
-    # =========================
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>🎟️ Rifa — Asignar boleto</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-sub'>El cliente elige su número. Si ya existe, no se puede asignar.</div>", unsafe_allow_html=True)
-
-    raffle_customer = st.text_input("Número de cliente o correo del cliente", key="raffle_customer")
-    raffle_sale_ticket = st.text_input("Número de ticket (folio de compra)", key="raffle_sale_ticket")
-    raffle_boleto = st.number_input("Número de boleto", min_value=1, step=1, value=1, key="raffle_boleto")
-
-    st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
-    do_raffle = st.button("Asignar boleto", key="btn_assign_raffle")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    if do_raffle:
-        ok, msg = raffle_assign_ticket(
-            customer_id_or_email=raffle_customer,
-            sale_ticket=raffle_sale_ticket,
-            boleto_num=int(raffle_boleto),
-            assigned_by=ss.get("admin_email", ""),
-        )
-        if ok:
-            st.success(msg)
-            log_action(db, "raffle_assign", ss.get("admin_email", ""), msg)
-        else:
-            st.error(msg)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # =========================
-    # 💵 CIERRE — Caja (ADMIN + SUPER_ADMIN)
-    # =========================
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>💵 Cierre de caja</div>", unsafe_allow_html=True)
-    st.markdown("<div class='card-sub'>Solo registra Cash + Tarjetas por turno (Matutino/Vespertino).</div>", unsafe_allow_html=True)
-
-    today = now_cdmx().date()
-    c1, c2, c3 = st.columns([2, 2, 2])
-    with c1:
-        close_date = st.date_input("Fecha", value=today, key="close_date")
-    with c2:
-        shift_label = st.selectbox("Turno", options=["Matutino", "Vespertino"], key="close_shift")
-        shift = "MAT" if shift_label == "Matutino" else "VES"
-    with c3:
-        card_total = st.number_input("Tarjetas ($MXN)", min_value=0.0, step=10.0, value=0.0, key="close_cards")
-
-    st.markdown("**Cash (número de billetes)**")
-    b1, b2, b3, b4, b5 = st.columns(5)
-    with b1:
-        n20 = st.number_input("$20", min_value=0, step=1, value=0, key="b20")
-    with b2:
-        n50 = st.number_input("$50", min_value=0, step=1, value=0, key="b50")
-    with b3:
-        n100 = st.number_input("$100", min_value=0, step=1, value=0, key="b100")
-    with b4:
-        n200 = st.number_input("$200", min_value=0, step=1, value=0, key="b200")
-    with b5:
-        n500 = st.number_input("$500", min_value=0, step=1, value=0, key="b500")
-
-    cash_total_preview = calc_cash_total(int(n20), int(n50), int(n100), int(n200), int(n500))
-    st.info(f"Cash total: **{money(cash_total_preview)}** — Ventas estimadas: **{money(cash_total_preview + float(card_total or 0))}**")
-
-    st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
-    do_close = st.button("Guardar cierre", key="btn_save_closing")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    if do_close:
-        date_iso = close_date.isoformat()
-        bills = {"20": int(n20), "50": int(n50), "100": int(n100), "200": int(n200), "500": int(n500)}
-        ok, msg = save_cash_closing(
-            date_iso=date_iso,
-            shift=shift,
-            bills=bills,
-            card_total=float(card_total or 0),
-            created_by=ss.get("admin_email", ""),
-        )
-        if ok:
-            st.success(msg)
-            log_action(db, "cash_closing", ss.get("admin_email", ""), msg)
-        else:
-            st.error(msg)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # =========================
-    # 📈 UTILIDAD — Consolidar (SOLO SUPER_ADMIN)
-    # =========================
-    if ss.get("admin_role") == "SUPER_ADMIN":
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>📈 Utilidad — Consolidar (Super Admin)</div>", unsafe_allow_html=True)
-        st.markdown("<div class='card-sub'>Usa los cierres (cash/tarjeta) y calcula utilidad. Costos variables se ajustan aquí.</div>", unsafe_allow_html=True)
-
-        colA, colB = st.columns(2)
-        with colA:
-            start_d = st.date_input("Inicio (YYYY-MM-DD)", value=today, key="profit_start")
-        with colB:
-            end_d = st.date_input("Fin (YYYY-MM-DD)", value=today, key="profit_end")
-
-        start_iso = start_d.isoformat()
-        end_iso = end_d.isoformat()
-
-        closings = fetch_closings_range(start_iso, end_iso)
-        total_cash = float(sum(float(x.get("cash_total", 0) or 0) for x in closings))
-        total_cards = float(sum(float(x.get("card_total", 0) or 0) for x in closings))
-        total_sales = float(sum(float(x.get("sales_total", 0) or 0) for x in closings))
-
-        k1, k2, k3 = st.columns(3)
-        k1.metric("Cash (rango)", money(total_cash))
-        k2.metric("Tarjetas (rango)", money(total_cards))
-        k3.metric("Ventas totales (rango)", money(total_sales))
-
-        st.markdown("### Costos fijos (no editables)")
-        st.write({k: money(v) for k, v in DEFAULT_FIXED_COSTS.items()})
-
-        st.markdown("### Costos variables (editable, prellenado con defaults)")
-        v1, v2, v3, v4, v5 = st.columns(5)
-        with v1:
-            c_sams = st.number_input("SAMS/SUPER", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["SAMS/SUPER"]), key="c_sams")
-        with v2:
-            c_ins = st.number_input("Insumos Porf", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["Insumos Porf"]), key="c_ins")
-        with v3:
-            c_mer = st.number_input("Mercado", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["Mercado"]), key="c_mer")
-        with v4:
-            c_mol = st.number_input("Molino", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["Molino"]), key="c_mol")
-        with v5:
-            c_gas = st.number_input("Gas", min_value=0.0, step=50.0, value=float(DEFAULT_VARIABLE_COSTS["Gas"]), key="c_gas")
-
-        variable_costs = {
-            "SAMS/SUPER": float(c_sams or 0),
-            "Insumos Porf": float(c_ins or 0),
-            "Mercado": float(c_mer or 0),
-            "Molino": float(c_mol or 0),
-            "Gas": float(c_gas or 0),
-        }
-
-        fixed_costs = {k: float(v) for k, v in DEFAULT_FIXED_COSTS.items()}
-        total_costs_preview = float(sum(fixed_costs.values()) + sum(variable_costs.values()))
-        profit_preview = float(total_sales - total_costs_preview)
-
-        if profit_preview <= 0:
-            cash_to_return_preview = total_cash
-        else:
-            cash_to_return_preview = max(0.0, total_cash - profit_preview)
-
-        st.markdown("<hr class='hr-soft' />", unsafe_allow_html=True)
-        st.markdown(f"**Costos totales:** {money(total_costs_preview)}")
-        st.markdown(f"**Utilidad:** {money(profit_preview)}")
-        st.markdown(f"**Cash a regresar a la churrería:** {money(cash_to_return_preview)}")
-
-        st.markdown("<div class='primary-btn'>", unsafe_allow_html=True)
-        do_profit = st.button("Consolidar y guardar utilidad", key="btn_profit_save")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        if do_profit:
-            totals = {"cash_total": total_cash, "card_total": total_cards, "sales_total": total_sales}
-            ok, msg = save_profit_consolidation(
-                start_iso=start_iso,
-                end_iso=end_iso,
-                totals=totals,
-                fixed_costs=fixed_costs,
-                variable_costs=variable_costs,
-                created_by=ss.get("admin_email", ""),
-            )
-            if ok:
-                st.success("✅ Consolidación guardada")
-                st.code(msg)
-                log_action(db, "profit_consolidation", ss.get("admin_email", ""), msg)
+                st.info("No hay pedidos con los filtros seleccionados")
+        
+        elif tab_admin == "Gestión Recompensas":
+            st.subheader("🎟️ Gestionar Recompensas Manual")
+            ident = st.text_input("Correo o ID Cliente")
+            if st.button("Buscar Cliente"):
+                user = get_user(ident)
+                if user:
+                    st.success(f"Encontrado: {user['email']} (ID: {user['cliente_id']})")
+                    st.write("Estrellas actuales:", user.get("estrellas", 0))
+                    st.write("Helados actuales:", user.get("helados", 0))
+                    st.write("Nivel:", user.get("nivel", "green"))
+                    
+                    col_stars, col_helados = st.columns(2)
+                    add_stars = col_stars.number_input("Sumar estrellas", min_value=0, value=0)
+                    add_helados = col_helados.number_input("Sumar helados", min_value=0, value=0)
+                    
+                    if st.button("Aplicar Recompensas"):
+                        update_points(user["email"], stars_add=add_stars, helados_add=add_helados, detalle="Admin manual")
+                        st.success("Recompensas aplicadas")
+                        st.rerun()
+                else:
+                    st.error("Cliente no encontrado")
+        
+        elif tab_admin == "Rifa Boletos":
+            st.subheader("🎟️ Sistema de Rifa")
+            raffle_id = st.secrets.get("raffle_id", "RIFA_2026")
+            st.caption(f"Rifa activa: {raffle_id}")
+            
+            customer_ident = st.text_input("Correo o ID Cliente")
+            ticket_num = st.text_input("Número de ticket / folio compra")
+            boleto = st.number_input("Número de boleto a asignar", min_value=1, step=1, value=1)
+            
+            if st.button("Asignar Boleto"):
+                user = get_user(customer_ident)
+                if not user:
+                    st.error("Cliente no encontrado")
+                elif not ticket_num:
+                    st.error("Ingresa número de ticket")
+                else:
+                    doc_id = f"{raffle_id}_{boleto}"
+                    ref = db.collection("raffle_tickets").document(doc_id)
+                    if ref.get().exists:
+                        st.error("Ese boleto ya está asignado")
+                    else:
+                        ref.set({
+                            "raffle_id": raffle_id,
+                            "boleto": boleto,
+                            "cliente_id": user["cliente_id"],
+                            "email": user["email"],
+                            "ticket_num": ticket_num,
+                            "assigned_by": st.session_state.username,
+                            "assigned_at": now_cdmx().isoformat()
+                        })
+                        log_action("rifa_asign", st.session_state.username, f"Boleto {boleto} a {user['cliente_id']}")
+                        st.success(f"Boleto {boleto} asignado correctamente")
+        
+        elif tab_admin == "Arqueo de Caja":
+            st.subheader("💵 Arqueo de Caja")
+            today = now_cdmx().date().isoformat()
+            shift = st.selectbox("Turno", ["Matutino", "Vespertino"])
+            
+            col1, col2, col3 = st.columns(3)
+            b20 = col1.number_input("$20", 0)
+            b50 = col1.number_input("$50", 0)
+            b100 = col2.number_input("$100", 0)
+            b200 = col2.number_input("$200", 0)
+            b500 = col3.number_input("$500", 0)
+            tarjetas = col3.number_input("Tarjetas / Terminal", 0.0)
+            
+            cash_total = b20*20 + b50*50 + b100*100 + b200*200 + b500*500
+            grand_total = cash_total + tarjetas
+            st.metric("Efectivo", money(cash_total))
+            st.metric("Total Día", money(grand_total))
+            
+            if st.button("Guardar Arqueo"):
+                doc_id = f"{today}_{'MAT' if shift == 'Matutino' else 'VES'}"
+                db.collection("cash_closings").document(doc_id).set({
+                    "date": today,
+                    "shift": shift,
+                    "b20": b20, "b50": b50, "b100": b100, "b200": b200, "b500": b500,
+                    "tarjetas": tarjetas,
+                    "cash_total": cash_total,
+                    "grand_total": grand_total,
+                    "created_by": st.session_state.username,
+                    "created_at": now_cdmx().isoformat()
+                })
+                log_action("arqueo", st.session_state.username, f"{doc_id} - ${grand_total}")
+                st.success("Arqueo guardado")
+        
+        elif tab_admin == "Consolidación Utilidad":
+            st.subheader("📈 Consolidación Utilidad (Super Admin)")
+            start_date = st.date_input("Inicio", now_cdmx().date())
+            end_date = st.date_input("Fin", now_cdmx().date())
+            
+            if st.button("Calcular"):
+                start_iso = start_date.isoformat()
+                end_iso = end_date.isoformat()
+                
+                closings = db.collection("cash_closings").where("date", ">=", start_iso).where("date", "<=", end_iso).stream()
+                total_cash = total_cards = 0
+                for c in closings:
+                    d = c.to_dict()
+                    total_cash += d.get("cash_total", 0)
+                    total_cards += d.get("tarjetas", 0)
+                total_sales = total_cash + total_cards
+                
+                # Costos (puedes editar en secrets o aquí)
+                fixed_costs = {
+                    "Nomina": 10100, "Renta": 8750, "Luz": 937.5, "Agua": 300, "Regalias": 3770
+                }
+                variable_costs = {
+                    "SAMS/SUPER": 4086.92, "Mercado": 320, "Molino": 100, "Gas": 712
+                }
+                total_costs = sum(fixed_costs.values()) + sum(variable_costs.values())
+                profit = total_sales - total_costs
+                cash_to_return = max(0, total_cash - profit) if profit > 0 else total_cash
+                
+                st.metric("Ventas Totales", money(total_sales))
+                st.metric("Costos Totales", money(total_costs))
+                st.metric("Utilidad", money(profit))
+                st.metric("Cash a regresar", money(cash_to_return))
+                
+                if st.button("Guardar Consolidación"):
+                    doc_id = f"{start_iso}_{end_iso}"
+                    db.collection("profit_consolidations").document(doc_id).set({
+                        "period_start": start_iso,
+                        "period_end": end_iso,
+                        "sales_total": total_sales,
+                        "total_costs": total_costs,
+                        "profit": profit,
+                        "cash_to_return": cash_to_return,
+                        "created_by": st.session_state.username,
+                        "created_at": now_cdmx().isoformat()
+                    })
+                    st.success("Consolidación guardada")
+        
+        elif tab_admin == "Logs Recientes":
+            st.subheader("📜 Logs Recientes")
+            logs = db.collection("logs").order_by("fecha", direction=firestore.Query.DESCENDING).limit(20).stream()
+            data = [l.to_dict() for l in logs]
+            if data:
+                df = pd.DataFrame(data)
+                st.dataframe(df[["accion", "usuario", "detalle", "fecha"]])
             else:
-                st.error(msg)
-
-        st.markdown("</div>", unsafe_allow_html=True)
+                st.info("No hay logs recientes")
     else:
-        st.info("ℹ️ Utilidad y consolidación: solo visible para SUPER_ADMIN.")
+        st.warning("PIN incorrecto")
 
-
-# =========================
-# APP RENDER
-# =========================
-ui_header()
-nav_bar()
-
-# promos
-show_promotions_popups()
-
-page = get_page()
-
-if page == "Inicio":
-    page_inicio()
-elif page == "Registro":
-    page_registro()
-elif page == "Iniciar sesión":
-    page_login()
-elif page == "Pick Up":
-    page_pickup()
-elif page == "Mesa":
-    page_mesa()
-elif page == "Admin":
-    page_admin()
-else:
-    page_inicio()
+# ────────────────────────────────────────────────
+# FIN DEL ARCHIVO COMPLETO
+# ────────────────────────────────────────────────
+st.markdown("---")
+st.caption(f"Churrería Porfirio © {now_cdmx().year} • Versión Fusionada Completa")
