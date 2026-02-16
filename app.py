@@ -578,7 +578,7 @@ def render_cart(cart_key: str) -> Tuple[float, List[Dict]]:
 # ────────────────────────────────────────────────
 # PANTALLA MESA
 # ────────────────────────────────────────────────
-elif st.session_state.screen == "MESA":
+if st.session_state.screen == "MESA":
     st.subheader("🍽️ Pedir en Mesa")
     
     if st.button("← Volver al Inicio", key="back_mesa"):
