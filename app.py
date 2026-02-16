@@ -467,19 +467,17 @@ if st.session_state.screen == "LOGIN":
         else:
             st.error("Credenciales incorrectas")
 
-    if st.button("¿Nuevo aquí? Regístrate"):
-        st.session_state.screen = "REGISTRO"
-        st.rerun()
-
+    # ✅ Acciones debajo (sin duplicar botones)
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("¿Nuevo aquí? Regístrate"):
+        if st.button("¿Nuevo aquí? Regístrate", key="btn_go_signup"):
             st.session_state.screen = "REGISTRO"
             st.rerun()
     with c2:
-        if st.button("Olvidé mi contraseña"):
+        if st.button("Olvidé mi contraseña", key="btn_go_reset"):
             st.session_state.screen = "RESET_PASSWORD"
             st.rerun()
+
 
 elif st.session_state.screen == "REGISTRO":
     st.subheader("Crear Cuenta")
