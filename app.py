@@ -471,6 +471,16 @@ if st.session_state.screen == "LOGIN":
         st.session_state.screen = "REGISTRO"
         st.rerun()
 
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("¿Nuevo aquí? Regístrate"):
+            st.session_state.screen = "REGISTRO"
+            st.rerun()
+    with c2:
+        if st.button("Olvidé mi contraseña"):
+            st.session_state.screen = "RESET_PASSWORD"
+            st.rerun()
+
 elif st.session_state.screen == "REGISTRO":
     st.subheader("Crear Cuenta")
 
@@ -515,6 +525,57 @@ elif st.session_state.screen == "REGISTRO":
     if st.button("Volver al login"):
         st.session_state.screen = "LOGIN"
         st.rerun()
+elif st.session_state.screen == "RESET_PASSWORD":
+    st.subheader("🔑 Restablecer contraseña")
+
+    st.caption("Para seguridad, confirma tu correo y tu teléfono (WhatsApp) registrado. Luego defines una nueva contraseña.")
+
+    email = st.text_input("Correo", value="", key="rp_email").strip().lower()
+    phone = st.text_input("Teléfono (WhatsApp)", value="", key="rp_phone").strip()
+
+    new_pw = st.text_input("Nueva contraseña", value="", type="password", key="rp_new_pw")
+    new_pw2 = st.text_input("Confirmar nueva contraseña", value="", type="password", key="rp_new_pw2")
+
+    colA, colB = st.columns([1,1])
+    with colA:
+        if st.button("✅ Restablecer", type="primary", use_container_width=True):
+            if not email or "@" not in email:
+                st.error("Ingresa un correo válido")
+            elif not phone or len(phone) < 8:
+                st.error("Ingresa tu teléfono")
+            elif len(new_pw) < 6:
+                st.error("La contraseña debe tener mínimo 6 caracteres")
+            elif new_pw != new_pw2:
+                st.error("Las contraseñas no coinciden")
+            else:
+                user = get_user(email)
+                if not user:
+                    st.error("No existe una cuenta con ese correo")
+                else:
+                    phone_db = (user.get("phone") or "").strip()
+
+                    # Comparación “tolerante”: ignora espacios y +52
+                    def norm_phone(x: str) -> str:
+                        x = (x or "").strip().replace(" ", "").replace("-", "")
+                        if x.startswith("+52"):
+                            x = x[3:]
+                        return x
+
+                    if norm_phone(phone) != norm_phone(phone_db):
+                        st.error("El teléfono no coincide con el registrado")
+                        log_action("pwd_reset_failed", email, "Teléfono no coincide")
+                    else:
+                        save_user(email, {"password_hash": hash_password(new_pw)})
+                        log_action("pwd_reset_done", email, "Reset por correo+tel")
+                        st.success("Contraseña actualizada ✅ Ya puedes iniciar sesión.")
+                        st.session_state.screen = "LOGIN"
+                        st.rerun()
+
+    with colB:
+        if st.button("← Volver al login", use_container_width=True):
+            st.session_state.screen = "LOGIN"
+            st.rerun()
+
 
 elif st.session_state.screen == "HOME":
     st.title("¡Bienvenid@ a Churrería Porfirio!")
