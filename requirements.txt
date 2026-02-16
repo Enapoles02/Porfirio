@@ -8,3 +8,4 @@ pyzbar
 opencv-python-headless
 zbar-py
 streamlit-autorefresh
+bcrypt
