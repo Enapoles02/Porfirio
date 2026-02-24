@@ -22,8 +22,8 @@ from typing import Dict, Any, List, Tuple, Optional
 st.set_page_config(page_title="Churrería Porfirio", layout="wide", page_icon="🥖")
 
 CDMX_TZ = ZoneInfo("America/Mexico_City")
-APP_TITLE = "Churrería Porfirio — Recompensas & Pedidos"
-LOGO_URL = "https://scontent.fmex39-1.fna.fbcdn.net/v/t39.30808-6/434309611_122124689540226950_3619993036029337305_n.jpg"
+APP_TITLE = "Churrería Porfirio ACOXPA — Recompensas & Pedidos"
+LOGO_URL = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFEPnIe6Hzjyr-Lpb5JCRRq-3lbu-dYF6qTA&s"
 
 st.markdown(
     """
