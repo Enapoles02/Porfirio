@@ -284,12 +284,12 @@ CATALOG = {
             {"name": "Americano", "base": 45, "options": ["Chico $45", "Grande $55"]},
             {"name": "Café del día Chiapas", "base": 35, "options": ["Chico"]},
             {"name": "Café de olla", "base": 45, "options": ["Chico $45", "Grande $55"]},
-            {"name": "Lechero/Mocha/Capuccino/Latte/Chai latte/Matcha/Taro/Horchata/Temporada", "base": 65, "options": ["Chico · Lechero $65", "Grande · Lechero $75", "Chico · Mocha $65", "Grande · Mocha $75", "Chico · Capuccino $65", "Grande · Capuccino $75", "Chico · Latte $65", "Grande · Latte $75", "Chico · Chai latte $65", "Grande · Chai latte $75", "Chico · Matcha $65", "Grande · Matcha $75", "Chico · Taro $65", "Grande · Taro $75", "Chico · Horchata $65", "Grande · Horchata $75", "Chico · Temporada $65", "Grande · Temporada $75", "+$10 Leche deslactosada", "+$10 Leche vegetal", "+$10 Leche light"]},
-            {"name": "Té / Limonada", "base": 40, "options": ["Chico · Té $40", "Grande · Té $45", "Chica · Limonada $40", "Grande · Limonada $45"]},
-            {"name": "Frappé", "base": 69, "options": ["Chico · Matcha $69", "Grande · Matcha $79", "Chico · Horchata $69", "Grande · Horchata $79", "Chico · Chai $69", "Grande · Chai $79", "Chico · Mocha $69", "Grande · Mocha $79", "Chico · Taro $69", "Grande · Taro $79", "Chico · Temporada $69", "Grande · Temporada $79", "Chico · Cookies $69", "Grande · Cookies $79", "Chico · Café $69", "Grande · Café $79"]},
+            {"name": "Bebidas con leche", "base": 65, "options": {"mode": "builder", "sizes": [{"label": "Chico", "price": 65}, {"label": "Grande", "price": 75}], "flavors": ["Lechero", "Mocha", "Capuccino", "Latte", "Chai latte", "Matcha", "Taro", "Horchata", "Temporada"], "extras": [{"label": "Leche deslactosada", "price": 10}, {"label": "Leche vegetal", "price": 10}, {"label": "Leche light", "price": 10}]}},
+            {"name": "Té / Limonada", "base": 40, "options": {"mode": "builder", "sizes": [{"label": "Chico", "price": 40}, {"label": "Grande", "price": 45}], "flavors": ["Té", "Limonada"], "extras": []}},
+            {"name": "Frappé", "base": 69, "options": {"mode": "builder", "sizes": [{"label": "Chico", "price": 69}, {"label": "Grande", "price": 79}], "flavors": ["Matcha", "Horchata", "Chai", "Mocha", "Taro", "Temporada", "Cookies", "Café"], "extras": []}},
         ],
         "Especialidad": [
-            {"name": "Bebida de especialidad", "base": 79, "options": ["Caliente · Caramel Machiatto $79", "Frío · Caramel Machiatto $89", "Caliente · Dirty Chai $79", "Frío · Dirty Chai $89", "Caliente · Dirty Horchata $79", "Frío · Dirty Horchata $89", "Caliente · Chocolate Mexicano $79", "Frío · Chocolate Mexicano $89", "Caliente · Crawnberry Mocha Blanco $79", "Frío · Crawnberry Mocha Blanco $89", "Caliente · Chocoreta $79", "Frío · Chocoreta $89", "+$10 Leche deslactosada", "+$10 Leche vegetal", "+$10 Leche light"]}
+            {"name": "Bebida de especialidad", "base": 79, "options": {"mode": "builder", "sizes": [{"label": "Caliente", "price": 79}, {"label": "Frío", "price": 89}], "flavors": ["Caramel Machiatto", "Dirty Chai", "Dirty Horchata", "Chocolate Mexicano", "Crawnberry Mocha Blanco", "Chocoreta"], "extras": [{"label": "Leche deslactosada", "price": 10}, {"label": "Leche vegetal", "price": 10}, {"label": "Leche light", "price": 10}]} }
         ],
     },
     "Bebidas/Helados": {
@@ -308,8 +308,8 @@ CATALOG = {
     },
     "Combos": {
         "Promociones y combos": [
-            {"name": "2 chocolates grandes + 6 churros tradicionales", "base": 229, "options": ["Combo"]},
-            {"name": "1 chocolate + 3 churros tradicionales", "base": 109, "options": ["Combo"]},
+            {"name": "2 chocolates grandes + 6 churros tradicionales", "base": 229, "options": {"mode": "builder", "sizes": [{"label": "Grande", "price": 229}], "flavors": ["Chocolate Suizo", "Chocolate Semi Amargo"], "extras": []}},
+            {"name": "1 chocolate + 3 churros tradicionales", "base": 109, "options": {"mode": "builder", "sizes": [{"label": "Grande", "price": 109}], "flavors": ["Chocolate Suizo", "Chocolate Semi Amargo"], "extras": []}},
             {"name": "2 granizados", "base": 99, "options": ["Combo"]},
             {"name": "Combo Café + Sandwich", "base": 89, "options": ["Café americano", "Latte +$10"]},
         ]
@@ -318,7 +318,7 @@ CATALOG = {
 
 
 def infer_price(base_price: float, option_text: str) -> float:
-    opt = option_text.strip()
+    opt = str(option_text).strip()
     if "+$" in opt:
         try:
             extra = float(opt.split("+$")[-1].split()[0])
@@ -336,6 +336,45 @@ def infer_price(base_price: float, option_text: str) -> float:
     return base_price
 
 
+def build_item_from_builder(prod_name: str, config: dict):
+    sizes = config.get("sizes", [])
+    flavors = config.get("flavors", [])
+    extras = config.get("extras", [])
+
+    size_labels = [x.get("label", "") for x in sizes] or ["Único"]
+    selected_size = st.selectbox("Tamaño / tipo", size_labels, key=f"size_{prod_name}")
+    selected_size_obj = next((x for x in sizes if x.get("label") == selected_size), {"label": selected_size, "price": config.get("base", 0)})
+
+    selected_flavor = None
+    if flavors:
+        selected_flavor = st.selectbox("Sabor / variante", flavors, key=f"flavor_{prod_name}")
+
+    selected_extras = []
+    extra_total = 0
+    if extras:
+        st.markdown("**Extras**")
+        extra_cols = st.columns(2)
+        for i, extra in enumerate(extras):
+            checked = extra_cols[i % 2].checkbox(
+                f"{extra.get('label')} (+{money(extra.get('price', 0))})",
+                key=f"extra_{prod_name}_{i}",
+            )
+            if checked:
+                selected_extras.append(extra.get("label"))
+                extra_total += float(extra.get("price", 0))
+
+    final_price = float(selected_size_obj.get("price", config.get("base", 0))) + extra_total
+
+    parts = [prod_name, selected_size_obj.get("label")]
+    if selected_flavor:
+        parts.append(selected_flavor)
+    if selected_extras:
+        parts.append(" / ".join(selected_extras))
+
+    item_name = " · ".join([p for p in parts if p])
+    return item_name, final_price
+
+
 # ---------------------------
 # DIALOG
 # ---------------------------
@@ -347,31 +386,39 @@ def option_dialog():
         return
 
     prod_name = payload["prod_name"]
-    price = payload["price"]
+    base_price = payload["price"]
     options = payload["options"]
     doc_id = payload["doc_id"]
 
     st.write(f"Seleccione para: **{prod_name}**")
-    cols = st.columns(2)
 
     order = load_order(doc_id)
     items = order.get("items", [])
 
-    for i, opt in enumerate(options):
-        final_price = infer_price(price, opt)
-        if cols[i % 2].button(f"{opt}\n{money(final_price)}", key=f"opt_{prod_name}_{i}", use_container_width=True):
-            items.append({
-                "n": f"{prod_name} ({opt})",
-                "p": final_price,
-                "q": 1,
-                "added_at": now_iso(),
-            })
-            total = calc_total(items)
-            update_order(doc_id, items, total)
-            st.session_state.dialog_payload = None
-            st.rerun()
+    if isinstance(options, dict) and options.get("mode") == "builder":
+        item_name, final_price = build_item_from_builder(prod_name, options)
+    else:
+        selected_option = st.selectbox("Selecciona opción", options, key=f"opt_{prod_name}")
+        final_price = infer_price(base_price, selected_option)
+        item_name = f"{prod_name} ({selected_option})"
 
-    if st.button("Cancelar", use_container_width=True):
+    st.markdown(f"💰 Precio: **{money(final_price)}**")
+
+    col1, col2 = st.columns(2)
+
+    if col1.button("Agregar", use_container_width=True):
+        items.append({
+            "n": item_name,
+            "p": final_price,
+            "q": 1,
+            "added_at": now_iso(),
+        })
+        total = calc_total(items)
+        update_order(doc_id, items, total)
+        st.session_state.dialog_payload = None
+        st.rerun()
+
+    if col2.button("Cancelar", use_container_width=True):
         st.session_state.dialog_payload = None
         st.rerun()
 
