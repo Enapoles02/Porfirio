@@ -245,66 +245,73 @@ def build_sale_folio() -> str:
 # ---------------------------
 CATALOG = {
     "Churros/Dulce": {
-        "Churros Tradicionales & Rellenos": [
-            {"name": "Churro Pz", "base": 14, "options": ["Azúcar", "Canela"]},
-            {"name": "Churros(3)", "base": 42, "options": ["Azúcar", "Canela"]},
-            {"name": "Churros(6)", "base": 79, "options": ["Azúcar", "Canela"]},
-            {"name": "Churros(12)", "base": 149, "options": ["Azúcar", "Canela"]},
-            {"name": "Churro Relleno", "base": 35, "options": ["Cajeta", "Mazapán", "Nutella", "Chocolate", "Fresa", "Frutos Rojos", "Lechera"]},
-            {"name": "Sandwich Churro", "base": 75, "options": ["Sencillo", "+$12 Topping"]},
-            {"name": "Churro Split", "base": 99, "options": ["3 Bolas Helado"]},
-        ],
-        "Waffles, Buñuelos & Postres": [
-            {"name": "Waffle", "base": 49, "options": ["Sencillo $49", "Topping $65"]},
+        "Churros y Postres": [
+            {"name": "Churro Pieza", "base": 14, "options": ["Tradicional"]},
+            {"name": "Churros 3 Piezas", "base": 42, "options": ["Tradicional"]},
+            {"name": "Churros 6 Piezas", "base": 79, "options": ["Tradicional"]},
+            {"name": "Churros 12 Piezas", "base": 149, "options": ["Tradicional"]},
             {"name": "Buñuelos", "base": 49, "options": ["Tradicional"]},
-            {"name": "Fresas Crema", "base": 75, "options": ["12oz $75", "16oz $85"]},
+            {"name": "Sandwich de Churro", "base": 75, "options": ["Sencillo"]},
+            {"name": "Churro Split", "base": 99, "options": ["3 bolas de helado + 2 churros"]},
+            {"name": "Waffle", "base": 49, "options": ["Sencillo + 1 salsa $49", "Con topping $65"]},
+            {"name": "Fresas con crema", "base": 75, "options": ["12 oz · 1 topping $75", "16 oz · 2 toppings $85"]},
         ],
     },
     "Comida/Desayunos": {
-        "Emparedados KIN & Smash Burger": [
-            {"name": "Emp. Clásico", "base": 69, "options": ["Jamón y Queso", "Combo +$45"]},
-            {"name": "Emp. Ratatouille", "base": 79, "options": ["3 Quesos", "Combo +$45"]},
-            {"name": "Emp. Pamplona", "base": 89, "options": ["Salami/Chorizo", "Combo +$45"]},
-            {"name": "Emp. Napoli", "base": 99, "options": ["Pollo/Ajo", "Combo +$45"]},
-            {"name": "Emp. Toscano", "base": 105, "options": ["Boloñesa/Pollo", "Combo +$45"]},
-            {"name": "KIN Smash", "base": 99, "options": ["Sencilla", "Doble +$29", "Combo +$45"]},
+        "KIN Smash Burger": [
+            {"name": "KIN Smash Burger", "base": 99, "options": ["Sencilla $99", "Doble carne $128", "Combo +$45"]},
         ],
-        "Desayunos (Incluyen Jugo/Fruta y Café)": [
-            {"name": "Chilaquiles", "base": 45, "options": ["Express $45", "Normal $129", "+$10 Pollo"]},
-            {"name": "Enfrijoladas", "base": 129, "options": ["Orden Completa"]},
-            {"name": "Molletes", "base": 99, "options": ["Sencillos", "+$10 Chorizo"]},
-            {"name": "Sincronizadas", "base": 99, "options": ["Jamón/Queso"]},
-            {"name": "Hotcakes", "base": 99, "options": ["Orden 3 pz", "+$35 Orden Extra"]},
+        "Emparedados KIN": [
+            {"name": "Clásico", "base": 69, "options": ["Jamón y queso", "Combo +$45"]},
+            {"name": "Ratatouille", "base": 79, "options": ["Tres quesos fundidos", "Combo +$45"]},
+            {"name": "Pamplona", "base": 89, "options": ["Salami, chorizo Pamplona, jamón y queso", "Combo +$45"]},
+            {"name": "Napoli", "base": 99, "options": ["Pollo, queso y ajo", "Combo +$45"]},
+            {"name": "Toscano", "base": 105, "options": ["Pollo, salsa boloñesa y parmesano", "Combo +$45"]},
+        ],
+        "Desayunos": [
+            {"name": "Chilaquiles Express", "base": 45, "options": ["Incluye jugo o fruta y café"]},
+            {"name": "Chilaquiles Normales", "base": 129, "options": ["Incluye jugo o fruta y café"]},
+            {"name": "Enfrijoladas", "base": 129, "options": ["Incluye jugo o fruta y café"]},
+            {"name": "Molletes", "base": 99, "options": ["Incluye jugo o fruta y café"]},
+            {"name": "Sincronizadas", "base": 99, "options": ["Incluye jugo o fruta y café"]},
+            {"name": "Orden de Hotcakes", "base": 99, "options": ["Incluye jugo o fruta y café", "Añade orden extra de 3 hotcakes +$35"]},
+            {"name": "Extra Hotcakes (3)", "base": 35, "options": ["Mazapán", "Cajeta", "Lechera", "Nutella", "Frutos rojos"]},
         ],
     },
     "Café/Barra": {
-        "Cafetería Tradicional": [
-            {"name": "Café", "base": 45, "options": ["Amer. Ch $45", "Amer. Gr $55", "Olla Ch $45", "Olla Gr $55", "Chiapas $35", "Espresso $39"]},
-            {"name": "Lechero/Latte", "base": 65, "options": ["Chico $65", "Grande $75", "+$10 Leche Veg"]},
-            {"name": "Capu/Matcha/Taro", "base": 65, "options": ["Chico $65", "Grande $75", "Horchata $65"]},
+        "Cafetería": [
+            {"name": "Espresso", "base": 39, "options": ["Sencillo"]},
+            {"name": "Americano", "base": 45, "options": ["Chico $45", "Grande $55"]},
+            {"name": "Café del día Chiapas", "base": 35, "options": ["Chico"]},
+            {"name": "Café de olla", "base": 45, "options": ["Chico $45", "Grande $55"]},
+            {"name": "Lechero/Mocha/Capuccino/Latte/Chai latte/Matcha/Taro/Horchata/Temporada", "base": 65, "options": ["Chico $65", "Grande $75", "Leche deslactosada +$10", "Leche vegetal +$10", "Leche light +$10"]},
+            {"name": "Té / Limonada", "base": 40, "options": ["Natural $40", "Mineral $45"]},
+            {"name": "Frappé", "base": 69, "options": ["Matcha chico $69", "Horchata chico $69", "Chai chico $69", "Mocha chico $69", "Taro chico $69", "Temporada chico $69", "Cookies chico $69", "Café chico $69", "Grande $79"]},
         ],
-        "Especialidades y Frappés": [
-            {"name": "Esp. Caliente", "base": 79, "options": ["Dirty Chai", "Dirty Horchata", "Chocoreta", "Mexicano", "Crawnberry Mocha"]},
-            {"name": "Esp. Fría", "base": 89, "options": ["Dirty Chai", "Dirty Horchata", "Chocoreta", "Mexicano", "Crawnberry Mocha"]},
-            {"name": "Frappé", "base": 69, "options": ["Mocha", "Taro", "Cookies", "Matcha", "Horchata", "Chai"]},
+        "Especialidad": [
+            {"name": "Bebida de especialidad", "base": 79, "options": ["Caliente $79", "Frío $89", "Caramel Machiatto", "Dirty Chai", "Dirty Horchata", "Chocolate Mexicano", "Crawnberry Mocha Blanco", "Chocoreta"]},
         ],
     },
     "Bebidas/Helados": {
-        "Bebidas Frías": [
-            {"name": "Bebida Natural", "base": 40, "options": ["Nat. $40", "Min. $45"]},
-            {"name": "Malteada", "base": 89, "options": ["Normal $89", "Grande $99", "Special $115"]},
-            {"name": "Embotellado", "base": 45, "options": ["Refresco $45", "Agua $30"]},
+        "Bebidas frías": [
+            {"name": "Malteada Normal", "base": 89, "options": ["Chica $89", "Grande $99"]},
+            {"name": "Malteada Special (Espesa)", "base": 99, "options": ["Chica $99", "Grande $115"]},
+            {"name": "Refresco", "base": 45, "options": ["Individual"]},
+            {"name": "Agua", "base": 30, "options": ["Individual"]},
         ],
-        "Helados KIN House": [
-            {"name": "Helado Suave", "base": 20, "options": ["Cono $20", "Sundae $35", "+$12 Topping"]},
-            {"name": "Helado Yogurth", "base": 59, "options": ["Sencillo $59", "Doble $75", "+$25 Ilimitado"]},
-            {"name": "House Series", "base": 90, "options": ["QUEEN (Vainilla) $90", "KING (Yogurth) $120"]},
+        "Helados": [
+            {"name": "Helado Suave", "base": 20, "options": ["Cono $20", "Sundae $35", "Topping extra +$12"]},
+            {"name": "Helado Yogurth", "base": 59, "options": ["Chico $59 · 1 topping y 1 salsa", "Grande $75 · 1 topping y 1 salsa", "Topping ilimitado +$25"]},
+            {"name": "QUEEN House", "base": 90, "options": ["Vainilla en vaso · hasta 2 toppings"]},
+            {"name": "KING House", "base": 120, "options": ["Yogurth en vaso · hasta 2 toppings"]},
         ],
     },
     "Combos": {
-        "Promociones y Paquetes": [
-            {"name": "Combo Tradición", "base": 109, "options": ["1 Choc + 3 Chur $109", "2 Choc + 6 Chur $229"]},
-            {"name": "Combo Desayuno", "base": 89, "options": ["Café + Sandwich $89", "2 Granizados $99"]},
+        "Promociones y combos": [
+            {"name": "2 chocolates grandes + 6 churros tradicionales", "base": 229, "options": ["Combo"]},
+            {"name": "1 chocolate + 3 churros tradicionales", "base": 109, "options": ["Combo"]},
+            {"name": "2 granizados", "base": 99, "options": ["Combo"]},
+            {"name": "Combo Café + Sandwich", "base": 89, "options": ["Café americano", "Latte +$10"]},
         ]
     },
 }
