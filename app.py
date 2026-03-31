@@ -284,12 +284,12 @@ CATALOG = {
             {"name": "Americano", "base": 45, "options": ["Chico $45", "Grande $55"]},
             {"name": "Café del día Chiapas", "base": 35, "options": ["Chico"]},
             {"name": "Café de olla", "base": 45, "options": ["Chico $45", "Grande $55"]},
-            {"name": "Lechero/Mocha/Capuccino/Latte/Chai latte/Matcha/Taro/Horchata/Temporada", "base": 65, "options": ["Chico $65", "Grande $75", "Leche deslactosada +$10", "Leche vegetal +$10", "Leche light +$10"]},
-            {"name": "Té / Limonada", "base": 40, "options": ["Natural $40", "Mineral $45"]},
-            {"name": "Frappé", "base": 69, "options": ["Matcha chico $69", "Horchata chico $69", "Chai chico $69", "Mocha chico $69", "Taro chico $69", "Temporada chico $69", "Cookies chico $69", "Café chico $69", "Grande $79"]},
+            {"name": "Lechero/Mocha/Capuccino/Latte/Chai latte/Matcha/Taro/Horchata/Temporada", "base": 65, "options": ["Chico · Lechero $65", "Grande · Lechero $75", "Chico · Mocha $65", "Grande · Mocha $75", "Chico · Capuccino $65", "Grande · Capuccino $75", "Chico · Latte $65", "Grande · Latte $75", "Chico · Chai latte $65", "Grande · Chai latte $75", "Chico · Matcha $65", "Grande · Matcha $75", "Chico · Taro $65", "Grande · Taro $75", "Chico · Horchata $65", "Grande · Horchata $75", "Chico · Temporada $65", "Grande · Temporada $75", "+$10 Leche deslactosada", "+$10 Leche vegetal", "+$10 Leche light"]},
+            {"name": "Té / Limonada", "base": 40, "options": ["Chico · Té $40", "Grande · Té $45", "Chica · Limonada $40", "Grande · Limonada $45"]},
+            {"name": "Frappé", "base": 69, "options": ["Chico · Matcha $69", "Grande · Matcha $79", "Chico · Horchata $69", "Grande · Horchata $79", "Chico · Chai $69", "Grande · Chai $79", "Chico · Mocha $69", "Grande · Mocha $79", "Chico · Taro $69", "Grande · Taro $79", "Chico · Temporada $69", "Grande · Temporada $79", "Chico · Cookies $69", "Grande · Cookies $79", "Chico · Café $69", "Grande · Café $79"]},
         ],
         "Especialidad": [
-            {"name": "Bebida de especialidad", "base": 79, "options": ["Caliente $79", "Frío $89", "Caramel Machiatto", "Dirty Chai", "Dirty Horchata", "Chocolate Mexicano", "Crawnberry Mocha Blanco", "Chocoreta"]},
+            {"name": "Bebida de especialidad", "base": 79, "options": ["Caliente · Caramel Machiatto $79", "Frío · Caramel Machiatto $89", "Caliente · Dirty Chai $79", "Frío · Dirty Chai $89", "Caliente · Dirty Horchata $79", "Frío · Dirty Horchata $89", "Caliente · Chocolate Mexicano $79", "Frío · Chocolate Mexicano $89", "Caliente · Crawnberry Mocha Blanco $79", "Frío · Crawnberry Mocha Blanco $89", "Caliente · Chocoreta $79", "Frío · Chocoreta $89", "+$10 Leche deslactosada", "+$10 Leche vegetal", "+$10 Leche light"]}
         ],
     },
     "Bebidas/Helados": {
