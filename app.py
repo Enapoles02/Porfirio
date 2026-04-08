@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import base64
@@ -268,16 +268,16 @@ hr {
 """, unsafe_allow_html=True)
 
 
-# ---------------------------
-# FIREBASE
-# ---------------------------
 def init_firebase():
     try:
         if not firebase_admin._apps:
             creds_obj = st.secrets["firebase_credentials"]
             fb_creds = creds_obj.to_dict() if hasattr(creds_obj, "to_dict") else dict(creds_obj)
             cred = credentials.Certificate(fb_creds)
-            firebase_admin.initialize_app(cred)
+
+            firebase_admin.initialize_app(cred, {
+                "storageBucket": st.secrets["firebase_storage_bucket"]
+            })
         return firestore.client()
     except Exception as e:
         st.error(f"Error al inicializar Firebase: {e}")
@@ -285,24 +285,35 @@ def init_firebase():
 
 
 db = init_firebase()
+bucket = storage.bucket()
 
 
 # ---------------------------
 # DATA HELPERS
 # ---------------------------
+def upload_logo_to_storage(file_bytes: bytes, filename: str) -> str:
+    ext = filename.split(".")[-1].lower() if "." in filename else "png"
+    content_type = f"image/{'jpeg' if ext in ['jpg', 'jpeg'] else ext}"
+
+    blob = bucket.blob(f"branding/{uuid.uuid4()}.{ext}")
+    blob.upload_from_string(file_bytes, content_type=content_type)
+    blob.make_public()
+    return blob.public_url
+
+
 def get_brand() -> dict:
     try:
         doc = db.collection("config").document("branding").get()
         if doc.exists:
             data = doc.to_dict() or {}
             return {
-                "logo_b64": data.get("logo_b64", ""),
+                "logo_url": data.get("logo_url", ""),
                 "nombre": data.get("nombre", "KIN House"),
                 "slogan": data.get("slogan", "Mismo sabor, mismo lugar"),
             }
     except Exception:
         pass
-    return {"logo_b64": "", "nombre": "KIN House", "slogan": "Mismo sabor, mismo lugar"}
+    return {"logo_url": "", "nombre": "KIN House", "slogan": "Mismo sabor, mismo lugar"}
 
 
 brand = get_brand()
@@ -989,8 +1000,8 @@ def close_ticket_session():
 # SIDEBAR
 # ---------------------------
 with st.sidebar:
-    if brand.get("logo_b64"):
-        st.markdown(f'<div class="sidebar-logo"><img src="data:image/png;base64,{brand["logo_b64"]}" style="width:80px;border-radius:12px;margin-bottom:10px;"></div>', unsafe_allow_html=True)
+    if brand.get("logo_url"):
+        st.markdown(f'<div class="sidebar-logo"><img src="{brand["logo_url"]}" style="width:80px;border-radius:12px;margin-bottom:10px;"></div>', unsafe_allow_html=True)
 
     st.markdown(f'<div class="sidebar-logo"><div class="brand-name">{brand.get("nombre","KIN House")}</div><div class="brand-slogan">{brand.get("slogan","Mismo sabor, mismo lugar")}</div></div>', unsafe_allow_html=True)
 
@@ -1113,7 +1124,7 @@ if menu_nav == "🪑 Mesas":
                 }
                 db.collection("ventas").add(sale_doc)
 
-                logo_src = f"data:image/png;base64,{brand['logo_b64']}" if brand.get("logo_b64") else ""
+                logo_src = brand.get("logo_url", "")
                 items_html = "".join([
                     f"<tr><td>{x.get('n','')}</td><td align='center'>{x.get('q',1)}</td><td align='right'>${float(x.get('p',0))*int(x.get('q',1)):,.0f}</td></tr>"
                     for x in order_items
@@ -1542,11 +1553,11 @@ elif menu_nav == "⚙️ Config":
     col_logo_preview, col_logo_upload = st.columns([1, 2])
 
     with col_logo_preview:
-        if brand.get("logo_b64"):
+       if brand.get("logo_url"):
             st.markdown(
                 f"""
                 <div style="background:var(--espresso);border-radius:16px;padding:20px;text-align:center;">
-                    <img src="data:image/png;base64,{brand['logo_b64']}"
+                    <img src="{brand['logo_url']}"
                          style="max-width:140px;max-height:140px;border-radius:10px;object-fit:contain;">
                     <div style="color:rgba(250,247,242,0.6);font-size:11px;margin-top:8px;">Logo actual</div>
                 </div>
@@ -1572,10 +1583,10 @@ elif menu_nav == "⚙️ Config":
             label_visibility="collapsed"
         )
 
-        if logo_file is not None:
-            # Vista previa antes de guardar
+       if logo_file is not None:
             raw = logo_file.read()
             preview_b64 = base64.b64encode(raw).decode()
+        
             st.markdown(
                 f"""
                 <div style="background:var(--sand);border-radius:12px;padding:12px;text-align:center;margin-bottom:10px;">
@@ -1586,16 +1597,19 @@ elif menu_nav == "⚙️ Config":
                 """,
                 unsafe_allow_html=True
             )
+        
             if st.button("✅ Guardar este logo", type="primary"):
+                logo_url = upload_logo_to_storage(raw, logo_file.name)
                 db.collection("config").document("branding").set(
-                    {"logo_b64": preview_b64}, merge=True
+                    {"logo_url": logo_url},
+                    merge=True
                 )
-                st.success("Logo guardado correctamente. Recarga la página para verlo en el sidebar.")
+                st.success("Logo guardado correctamente.")
                 st.rerun()
 
-        if brand.get("logo_b64"):
+        if brand.get("logo_url"):
             if st.button("🗑️ Eliminar logo actual"):
-                db.collection("config").document("branding").set({"logo_b64": ""}, merge=True)
+                db.collection("config").document("branding").set({"logo_url": ""}, merge=True)
                 st.warning("Logo eliminado.")
                 st.rerun()
 
