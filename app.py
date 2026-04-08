@@ -1553,7 +1553,7 @@ elif menu_nav == "⚙️ Config":
     col_logo_preview, col_logo_upload = st.columns([1, 2])
 
     with col_logo_preview:
-       if brand.get("logo_url"):
+        if brand.get("logo_url"):
             st.markdown(
                 f"""
                 <div style="background:var(--espresso);border-radius:16px;padding:20px;text-align:center;">
@@ -1583,10 +1583,10 @@ elif menu_nav == "⚙️ Config":
             label_visibility="collapsed"
         )
 
-       if logo_file is not None:
+        if logo_file is not None:
             raw = logo_file.read()
             preview_b64 = base64.b64encode(raw).decode()
-        
+
             st.markdown(
                 f"""
                 <div style="background:var(--sand);border-radius:12px;padding:12px;text-align:center;margin-bottom:10px;">
@@ -1597,7 +1597,7 @@ elif menu_nav == "⚙️ Config":
                 """,
                 unsafe_allow_html=True
             )
-        
+
             if st.button("✅ Guardar este logo", type="primary"):
                 logo_url = upload_logo_to_storage(raw, logo_file.name)
                 db.collection("config").document("branding").set(
@@ -1609,7 +1609,10 @@ elif menu_nav == "⚙️ Config":
 
         if brand.get("logo_url"):
             if st.button("🗑️ Eliminar logo actual"):
-                db.collection("config").document("branding").set({"logo_url": ""}, merge=True)
+                db.collection("config").document("branding").set(
+                    {"logo_url": ""},
+                    merge=True
+                )
                 st.warning("Logo eliminado.")
                 st.rerun()
 
@@ -1620,9 +1623,13 @@ elif menu_nav == "⚙️ Config":
     with st.form("cfg_brand_form"):
         brand_name = st.text_input("Nombre del negocio", value=brand.get("nombre", "KIN House"))
         slogan = st.text_input("Slogan", value=brand.get("slogan", "Mismo sabor, mismo lugar"))
+
         if st.form_submit_button("Guardar nombre y slogan", type="primary"):
             db.collection("config").document("branding").set(
-                {"nombre": brand_name.strip(), "slogan": slogan.strip()},
+                {
+                    "nombre": brand_name.strip(),
+                    "slogan": slogan.strip()
+                },
                 merge=True
             )
             st.success("Guardado correctamente.")
@@ -1633,6 +1640,7 @@ elif menu_nav == "⚙️ Config":
     # ---- RESTAURAR CATÁLOGO ----
     st.markdown("### 🗄️ Catálogo base")
     st.caption("Restaura todos los productos del menú oficial de KIN House. Sobreescribirá el catálogo actual.")
+
     if st.button("🔄 Restaurar catálogo base", type="primary"):
         save_catalog_to_db(DEFAULT_CATALOG)
         get_catalog.clear()
