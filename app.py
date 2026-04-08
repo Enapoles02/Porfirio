@@ -53,8 +53,7 @@ init_state()
 # ---------------------------
 # ESTILOS
 # ---------------------------
-"last_ticket_html": None,
-"last_folio": None,
+
 
 
 st.markdown("""
