@@ -1131,29 +1131,218 @@ if menu_nav == "🪑 Mesas":
                 ])
                 recibido_html = f"<div>RECIBIDO: {money(cash_received)}</div><div>CAMBIO: {money(cash_received - order_total)}</div>" if payment_method == "Efectivo" else ""
 
+                app_url = "https://tu-app.com"
+                cajero_ticket = cashbox.get("usuario", "N/A")
+                
+                items_html = "".join([
+                    f"""
+                    <tr>
+                        <td style="padding:4px 0;vertical-align:top;border-bottom:1px dotted #ddd;">{x.get('n','')}</td>
+                        <td align="center" style="padding:4px 0;vertical-align:top;border-bottom:1px dotted #ddd;">{x.get('q',1)}</td>
+                        <td align="right" style="padding:4px 0;vertical-align:top;border-bottom:1px dotted #ddd;">${float(x.get('p',0))*int(x.get('q',1)):,.0f}</td>
+                    </tr>
+                    """
+                    for x in order_items
+                ])
+                
+                recibido_html = (
+                    f"<div style='margin-top:6px;'><b>RECIBIDO:</b> {money(cash_received)}</div>"
+                    f"<div><b>CAMBIO:</b> {money(cash_received - order_total)}</div>"
+                ) if payment_method == "Efectivo" else ""
+                
+                
                 ticket_html = f"""
-                <div id="tkt" style="width:280px;font-family:monospace;font-size:12px;color:#000;padding:12px;background:#fff;">
-                    <center>
-                        {f'<img src="{logo_src}" width="80"><br>' if logo_src else ''}
-                        <b>{brand.get('nombre','KIN House')}</b><br>
-                        {brand.get('slogan','')}<br>
-                        {now_cdmx().strftime('%d/%m/%Y %H:%M')}<br>
-                        Folio: {folio}<br>
-                        Mesa: {st.session_state.enom}
-                    </center>
-                    <hr>
-                    <table width="100%">
-                        <tr><th align="left">Producto</th><th>Cant</th><th align="right">Imp</th></tr>
-                        {items_html}
-                    </table>
-                    <hr>
-                    <div>MÉTODO: {payment_method}</div>
-                    {recibido_html}
-                    <div align="right"><b>TOTAL: {money(order_total)}</b></div>
-                    {f'<div>NOTA: {sale_note}</div>' if sale_note else ''}
-                    <br><center>¡Gracias por tu visita!</center>
-                </div>
-                <script>window.print();</script>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Ticket</title>
+                    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+                    <style>
+                        body {{
+                            margin: 0;
+                            padding: 0;
+                            background: #fff;
+                            font-family: 'Courier New', monospace;
+                            color: #000;
+                        }}
+                
+                        #tkt {{
+                            width: 302px;
+                            margin: 0 auto;
+                            padding: 12px;
+                            box-sizing: border-box;
+                            background: #fff;
+                            font-size: 12px;
+                            line-height: 1.42;
+                        }}
+                
+                        .center {{ text-align: center; }}
+                        .small {{ font-size: 10px; }}
+                        .tiny {{ font-size: 9px; }}
+                        .title {{
+                            font-size: 18px;
+                            font-weight: bold;
+                            letter-spacing: 0.8px;
+                        }}
+                        .subtitle {{
+                            font-size: 11px;
+                            margin-top: 2px;
+                        }}
+                        .section {{
+                            margin-top: 8px;
+                        }}
+                        .hr {{
+                            border-top: 1px dashed #000;
+                            margin: 10px 0;
+                        }}
+                        table {{
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-size: 12px;
+                        }}
+                        th {{
+                            text-align: left;
+                            padding-bottom: 4px;
+                            border-bottom: 1px solid #000;
+                        }}
+                        .right {{ text-align: right; }}
+                        .bold {{ font-weight: bold; }}
+                        .total {{
+                            font-size: 15px;
+                            font-weight: bold;
+                            text-align: right;
+                            margin-top: 8px;
+                        }}
+                        .legal {{
+                            font-size: 9px;
+                            text-align: justify;
+                            margin-top: 8px;
+                        }}
+                        .loyalty {{
+                            font-size: 10px;
+                            text-align: center;
+                            font-weight: bold;
+                            margin-top: 10px;
+                        }}
+                        .qr-wrap {{
+                            text-align: center;
+                            margin-top: 10px;
+                        }}
+                        .barcode-wrap {{
+                            text-align: center;
+                            margin-top: 8px;
+                        }}
+                        .footer {{
+                            text-align: center;
+                            font-size: 11px;
+                            margin-top: 8px;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div id="tkt">
+                        <div class="center">
+                            {f'<img src="{logo_src}" width="82" style="margin-bottom:6px;"><br>' if logo_src else ''}
+                            <div class="title">{brand.get('nombre','KIN House')}</div>
+                            <div class="subtitle">{brand.get('slogan','')}</div>
+                
+                            <div class="small section">
+                                CALZ ACOXPA 337<br>
+                                COLONIA VILLA LAZARO CARDENAS
+                            </div>
+                
+                            <div class="section">
+                                {now_cdmx().strftime('%d/%m/%Y %H:%M')}
+                            </div>
+                            <div>Folio: {folio}</div>
+                            <div>Mesa: {st.session_state.enom}</div>
+                            <div>Cajero(a): {cajero_ticket}</div>
+                        </div>
+                
+                        <div class="hr"></div>
+                
+                        <table>
+                            <tr>
+                                <th>Producto</th>
+                                <th style="text-align:center;">Cant</th>
+                                <th style="text-align:right;">Imp</th>
+                            </tr>
+                            {items_html}
+                        </table>
+                
+                        <div class="hr"></div>
+                
+                        <div><span class="bold">MÉTODO DE PAGO:</span> {payment_method}</div>
+                        {recibido_html}
+                
+                        <div class="total">TOTAL: {money(order_total)}</div>
+                
+                        {f'<div style="margin-top:8px;"><span class="bold">NOTA:</span> {sale_note}</div>' if sale_note else ''}
+                
+                        <div class="hr"></div>
+                
+                        <div class="small center">
+                            QUEJAS Y SUGERENCIAS:<br>
+                            KIKENAPOLES02@GMAIL.COM
+                        </div>
+                
+                        <div class="small center" style="margin-top:8px;">
+                            FACTURAS AL CORREO:<br>
+                            KIKENAPOLES02@GMAIL.COM
+                        </div>
+                
+                        <div class="legal">
+                            KIN HOUSE ES PROPIEDAD INDIVIDUAL REGISTRADA Y NO TIENE SUCURSALES.
+                            ES UNA MARCA INDEPENDIENTE A FRANQUICIA MASTER O CHURRERIA PORFIRIO.
+                        </div>
+                
+                        <div class="loyalty">
+                            NO OLVIDES REGISTRAR TU MONTO EN TU TARJETA DE LEALTAD
+                            PARA OBTENER RECOMPENSAS
+                        </div>
+                
+                        <div class="qr-wrap">
+                            <div class="small bold">ESCANEA Y PIDE EN LA APP</div>
+                            <img
+                                src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={app_url}"
+                                width="110"
+                                height="110"
+                                alt="QR APP"
+                                style="margin-top:6px;"
+                            >
+                            <div class="tiny" style="margin-top:4px;">{app_url}</div>
+                        </div>
+                
+                        <div class="barcode-wrap">
+                            <svg id="barcode"></svg>
+                            <div class="tiny" style="margin-top:2px;">{folio}</div>
+                        </div>
+                
+                        <div class="hr"></div>
+                
+                        <div class="footer">
+                            ¡GRACIAS POR TU VISITA!<br>
+                            VUELVE PRONTO ☀️
+                        </div>
+                    </div>
+                
+                    <script>
+                        JsBarcode("#barcode", "{folio}", {{
+                            format: "CODE128",
+                            lineColor: "#000",
+                            width: 1.5,
+                            height: 42,
+                            displayValue: false,
+                            margin: 0
+                        }});
+                
+                        setTimeout(function() {{
+                            window.print();
+                        }}, 500);
+                    </script>
+                </body>
+                </html>
                 """
                 components.html(ticket_html, height=0)
 
