@@ -276,7 +276,7 @@ def init_firebase():
             cred = credentials.Certificate(fb_creds)
 
             firebase_admin.initialize_app(cred, {
-                "storageBucket": st.secrets["firebase_storage_bucket"]
+                "storageBucket": st.secrets["firebase_credentials"]["firebase_storage_bucket"]
             })
         return firestore.client()
     except Exception as e:
@@ -285,7 +285,7 @@ def init_firebase():
 
 
 db = init_firebase()
-bucket = storage.bucket()
+bucket = storage.bucket(name=st.secrets["firebase_credentials"]["firebase_storage_bucket"])
 
 
 # ---------------------------
