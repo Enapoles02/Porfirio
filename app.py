@@ -53,6 +53,10 @@ init_state()
 # ---------------------------
 # ESTILOS
 # ---------------------------
+"last_ticket_html": None,
+"last_folio": None,
+
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -1344,8 +1348,9 @@ if menu_nav == "🪑 Mesas":
                 </body>
                 </html>
                 """
-                components.html(ticket_html, height=0)
-
+                components.html(ticket_html, height=650, scrolling=True)
+                st.success(f"✅ Venta registrada: {folio}")
+                
                 db.collection("comandas").document(st.session_state.cid).update({
                     "estado": "CERRADA",
                     "closed_at": now_iso(),
@@ -1353,8 +1358,6 @@ if menu_nav == "🪑 Mesas":
                     "total": order_total,
                 })
                 close_ticket_session()
-                st.success(f"✅ Venta registrada: {folio}")
-                st.rerun()
 
             if st.button("↩ Salir sin cerrar"):
                 close_ticket_session()
