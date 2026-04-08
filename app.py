@@ -1314,8 +1314,18 @@ elif menu_nav == "🛒 Catálogo":
     # ---- LISTADO DE PRODUCTOS ----
     st.markdown(f"### Productos en **{sel_cat} › {sel_sec}**")
 
+    st.markdown(f"### Productos en **{sel_cat} › {sel_sec}**")
+
     for idx, prod in enumerate(products):
-        with st.expander(f"{'🟢' if prod.get('active', True) else '🔴'}  {prod.get('name','Sin nombre')}  —  {money(prod.get('base',0))}"):
+        if not isinstance(prod, dict):
+            st.error(f"Producto inválido en índice {idx}: {prod}")
+            continue
+    
+        with st.expander(
+            f"{'🟢' if prod.get('active', True) else '🔴'}  "
+            f"{prod.get('name', 'Sin nombre')}  —  "
+            f"{money(prod.get('base', 0))}"
+        ):
             with st.form(key=f"edit_prod_{idx}"):
                 pname = st.text_input("Nombre del producto", value=prod.get("name", ""), key=f"pn_{idx}")
                 pcols = st.columns(2)
